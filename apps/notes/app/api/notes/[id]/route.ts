@@ -13,11 +13,15 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserAuth();
+    // Development mode: use mock org ID
+    const skipAuth = process.env.SKIP_AUTH === 'true';
+    const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
     const { id } = await context.params;
 
-    // Check subscription
-    await checkSubscription(orgId, 'notes');
+    if (!skipAuth) {
+      // Check subscription
+      await checkSubscription(orgId, 'notes');
+    }
 
     // Fetch note
     const note = await getNoteById(id, orgId);
@@ -44,11 +48,16 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserAuth();
+    // Development mode: use mock org ID
+    const skipAuth = process.env.SKIP_AUTH === 'true';
+    const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
+    const userId = skipAuth ? '00000000-0000-0000-0000-000000000002' : (await getUserAuth()).userId;
     const { id } = await context.params;
 
-    // Check subscription
-    await checkSubscription(orgId, 'notes');
+    if (!skipAuth) {
+      // Check subscription
+      await checkSubscription(orgId, 'notes');
+    }
 
     // Parse and validate request body
     const body = await request.json();
@@ -61,12 +70,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Note not found' }, { status: 404 });
     }
 
-    // Record audit event
-    await recordAudit(
-      createAuditEvent(orgId, userId, 'update', 'note', note.id, {
-        changes: validatedData,
-      })
-    );
+    if (!skipAuth) {
+      // Record audit event
+      await recordAudit(
+        createAuditEvent(orgId, userId, 'update', 'note', note.id, {
+          changes: validatedData,
+        })
+      );
+    }
 
     return NextResponse.json({ note });
   } catch (error) {
@@ -94,11 +105,16 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserAuth();
+    // Development mode: use mock org ID
+    const skipAuth = process.env.SKIP_AUTH === 'true';
+    const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
+    const userId = skipAuth ? '00000000-0000-0000-0000-000000000002' : (await getUserAuth()).userId;
     const { id } = await context.params;
 
-    // Check subscription
-    await checkSubscription(orgId, 'notes');
+    if (!skipAuth) {
+      // Check subscription
+      await checkSubscription(orgId, 'notes');
+    }
 
     // Delete note (soft delete)
     const note = await deleteNote(id, orgId);
@@ -107,10 +123,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Note not found' }, { status: 404 });
     }
 
-    // Record audit event
-    await recordAudit(
-      createAuditEvent(orgId, userId, 'delete', 'note', note.id)
-    );
+    if (!skipAuth) {
+      // Record audit event
+      await recordAudit(
+        createAuditEvent(orgId, userId, 'delete', 'note', note.id)
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

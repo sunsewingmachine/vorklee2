@@ -32,18 +32,38 @@ export default function DashboardLayout({
   };
 
   const drawer = (
-    <Box>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div">
+    <Box sx={{ 
+      bgcolor: '#0f1419', 
+      height: '100%', 
+      color: '#fff',
+      background: 'linear-gradient(180deg, #0f1419 0%, #1a1f2e 100%)',
+    }}>
+      <Toolbar sx={{ 
+        bgcolor: 'rgba(25, 118, 210, 0.15)', 
+        borderBottom: '1px solid rgba(25, 118, 210, 0.2)',
+        backdropFilter: 'blur(10px)',
+      }}>
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', color: '#fff' }}>
           📝 Notes
         </Typography>
       </Toolbar>
       <List>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
-            <ListItemButton component={Link} href={item.href}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
+            <ListItemButton 
+              component={Link} 
+              href={item.href}
+              sx={{
+                color: '#e3f2fd',
+                '&:hover': {
+                  bgcolor: 'rgba(25, 118, 210, 0.1)',
+                  borderLeft: '3px solid #1976d2',
+                },
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <ListItemIcon sx={{ color: '#90caf9' }}>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} sx={{ '& .MuiTypography-root': { fontWeight: 500 } }} />
             </ListItemButton>
           </ListItem>
         ))}
@@ -58,6 +78,7 @@ export default function DashboardLayout({
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          bgcolor: '#1976d2', // Blue color
         }}
       >
         <Toolbar>
@@ -69,7 +90,7 @@ export default function DashboardLayout({
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
             Notes Dashboard
           </Typography>
         </Toolbar>

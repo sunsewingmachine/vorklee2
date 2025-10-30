@@ -11,10 +11,15 @@ import { createNoteSchema } from '@/lib/validations/notes';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserAuth();
+    // Development mode: use mock org ID
+    const skipAuth = process.env.SKIP_AUTH === 'true';
+    const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
+    const userId = skipAuth ? '00000000-0000-0000-0000-000000000002' : (await getUserAuth()).userId;
     
-    // Check subscription
-    await checkSubscription(orgId, 'notes');
+    if (!skipAuth) {
+      // Check subscription
+      await checkSubscription(orgId, 'notes');
+    }
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
@@ -23,8 +28,10 @@ export async function GET(request: NextRequest) {
     // Fetch notes
     const notesList = await getNotes(orgId, includeArchived);
 
-    // Track feature usage
-    await trackFeatureUsage(orgId, userId, 'list_notes');
+    if (!skipAuth) {
+      // Track feature usage
+      await trackFeatureUsage(orgId, userId, 'list_notes');
+    }
 
     return NextResponse.json({ notes: notesList });
   } catch (error) {
@@ -41,10 +48,15 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserAuth();
+    // Development mode: use mock org ID
+    const skipAuth = process.env.SKIP_AUTH === 'true';
+    const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
+    const userId = skipAuth ? '00000000-0000-0000-0000-000000000002' : (await getUserAuth()).userId;
 
-    // Check subscription
-    await checkSubscription(orgId, 'notes');
+    if (!skipAuth) {
+      // Check subscription
+      await checkSubscription(orgId, 'notes');
+    }
 
     // Parse and validate request body
     const body = await request.json();
@@ -53,15 +65,17 @@ export async function POST(request: NextRequest) {
     // Create note
     const note = await createNote(validatedData, orgId, userId);
 
-    // Record audit event
-    await recordAudit(
-      createAuditEvent(orgId, userId, 'create', 'note', note.id, {
-        title: note.title,
-      })
-    );
+    if (!skipAuth) {
+      // Record audit event
+      await recordAudit(
+        createAuditEvent(orgId, userId, 'create', 'note', note.id, {
+          title: note.title,
+        })
+      );
 
-    // Track feature usage
-    await trackFeatureUsage(orgId, userId, 'create_note');
+      // Track feature usage
+      await trackFeatureUsage(orgId, userId, 'create_note');
+    }
 
     return NextResponse.json({ note }, { status: 201 });
   } catch (error) {

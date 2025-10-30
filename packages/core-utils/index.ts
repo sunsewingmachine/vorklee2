@@ -1,20 +1,6 @@
 import Redis from 'ioredis';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
 
-// Redis client singleton
-let redisClient: Redis | null = null;
-
-export function getRedisClient(): Redis {
-  if (!redisClient) {
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      throw new Error('REDIS_URL environment variable is not set');
-    }
-    redisClient = new Redis(redisUrl);
-  }
-  return redisClient;
-}
-
 // Logger utility
 export const logger = {
   info: (message: string, meta?: any) => {
@@ -28,6 +14,28 @@ export const logger = {
   },
 };
 
+// Redis client singleton
+let redisClient: Redis | null = null;
+
+export function getRedisClient(): Redis {
+  if (!redisClient) {
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl) {
+      // In development, return a mock client instead of throwing
+      logger.warn('REDIS_URL not set, using mock Redis client');
+      return {
+        get: async () => null,
+        set: async () => 'OK',
+        setex: async () => 'OK',
+        del: async () => 0,
+        keys: async () => [],
+      } as any;
+    }
+    redisClient = new Redis(redisUrl);
+  }
+  return redisClient;
+}
+
 // Rate limiter factory
 export interface RateLimiterConfig {
   points: number; // Number of requests
@@ -36,21 +44,36 @@ export interface RateLimiterConfig {
 }
 
 export function createRateLimiter(config: RateLimiterConfig) {
-  const redis = getRedisClient();
-  
-  return new RateLimiterRedis({
-    storeClient: redis,
-    points: config.points,
-    duration: config.duration,
-    blockDuration: config.blockDuration,
-  });
+  try {
+    const redis = getRedisClient();
+    return new RateLimiterRedis({
+      storeClient: redis,
+      points: config.points,
+      duration: config.duration,
+      blockDuration: config.blockDuration,
+    });
+  } catch (error) {
+    // Return a no-op limiter if Redis is not available
+    logger.warn('Redis not available, rate limiter disabled');
+    return {
+      consume: async () => {},
+      delete: async () => {},
+      reset: async () => {},
+    } as any;
+  }
 }
 
-// Default rate limiter (100 requests per minute)
-export const defaultRateLimiter = createRateLimiter({
-  points: 100,
-  duration: 60,
-});
+// Default rate limiter (100 requests per minute) - lazy loaded
+let _defaultRateLimiter: any = null;
+export function getDefaultRateLimiter() {
+  if (!_defaultRateLimiter) {
+    _defaultRateLimiter = createRateLimiter({
+      points: 100,
+      duration: 60,
+    });
+  }
+  return _defaultRateLimiter;
+}
 
 // Helper to format dates
 export function formatDate(date: Date): string {

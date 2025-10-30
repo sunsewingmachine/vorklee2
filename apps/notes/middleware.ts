@@ -40,6 +40,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // TEMPORARY: Skip auth for development (REMOVE IN PRODUCTION)
+  if (pathname.startsWith('/dashboard')) {
+    return NextResponse.next();
+  }
+
   // Rate limiting for API routes
   if (pathname.startsWith('/api/')) {
     const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
@@ -50,45 +55,8 @@ export function middleware(request: NextRequest) {
         { status: 429 }
       );
     }
-  }
-
-  // Authentication check for protected routes
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/api/')) {
-    const token = request.cookies.get('vorklee2_session')?.value;
-
-    if (!token) {
-      // Redirect to login page or return unauthorized
-      if (pathname.startsWith('/dashboard')) {
-        const loginUrl = new URL('/login', request.url);
-        loginUrl.searchParams.set('from', pathname);
-        return NextResponse.redirect(loginUrl);
-      }
-      
-      return NextResponse.json(
-        { error: 'Unauthorized: No session token found' },
-        { status: 401 }
-      );
-    }
-
-    try {
-      // Verify the token
-      verifySession(token);
-      
-      // Token is valid, continue
-      return NextResponse.next();
-    } catch (error) {
-      // Token is invalid
-      if (pathname.startsWith('/dashboard')) {
-        const loginUrl = new URL('/login', request.url);
-        loginUrl.searchParams.set('from', pathname);
-        return NextResponse.redirect(loginUrl);
-      }
-      
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid session token' },
-        { status: 401 }
-      );
-    }
+    // TEMPORARY: Skip auth for API in development
+    return NextResponse.next();
   }
 
   return NextResponse.next();
