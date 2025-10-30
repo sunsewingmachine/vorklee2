@@ -1,4 +1,4 @@
-import { logger } from '@core-utils';
+import { logger } from '@vorklee2/core-utils';
 
 export interface AnalyticsEvent {
   organizationId: string;
@@ -70,4 +70,5 @@ export async function trackPageView(
     timestamp: new Date(),
   });
 }
+
 

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserAuth } from '@core-auth';
-import { checkSubscription } from '@core-billing';
-import { recordAudit, createAuditEvent } from '@core-audit';
-import { trackFeatureUsage } from '@core-analytics';
+import { getUserAuth } from '@vorklee2/core-auth';
+import { checkSubscription } from '@vorklee2/core-billing';
+import { recordAudit, createAuditEvent } from '@vorklee2/core-audit';
+import { trackFeatureUsage } from '@vorklee2/core-analytics';
 import { getNotes, createNote } from '@/services/notes.service';
 import { createNoteSchema } from '@/lib/validations/notes';
 
@@ -80,4 +80,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 

@@ -77,3 +77,4 @@ export async function deleteNotebook(notebookId: string, organizationId: string)
     .where(and(eq(notebooks.id, notebookId), eq(notebooks.organizationId, organizationId)));
 }
 
+

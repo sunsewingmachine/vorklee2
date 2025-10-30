@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserAuth } from '@core-auth';
-import { checkSubscription } from '@core-billing';
-import { recordAudit, createAuditEvent } from '@core-audit';
+import { getUserAuth } from '@vorklee2/core-auth';
+import { checkSubscription } from '@vorklee2/core-billing';
+import { recordAudit, createAuditEvent } from '@vorklee2/core-audit';
 import { getNotebooks, createNotebook } from '@/services/notebooks.service';
 import { createNotebookSchema } from '@/lib/validations/notes';
 
@@ -69,4 +69,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 

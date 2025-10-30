@@ -1,4 +1,4 @@
-import { logger } from '@core-utils';
+import { logger } from '@vorklee2/core-utils';
 
 export type PlanTier = 'free' | 'pro' | 'business' | 'enterprise';
 
@@ -75,4 +75,5 @@ export async function getSubscriptionDetails(
 ): Promise<SubscriptionStatus> {
   return checkSubscription(organizationId, appCode);
 }
+
 

@@ -61,3 +61,4 @@ export const globalUsers = pgTable('global_users', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+

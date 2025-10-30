@@ -62,3 +62,4 @@ export async function deleteTag(tagId: string, organizationId: string) {
   await db.delete(tags).where(and(eq(tags.id, tagId), eq(tags.organizationId, organizationId)));
 }
 
+

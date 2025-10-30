@@ -1,4 +1,4 @@
-import { logger } from '@core-utils';
+import { logger } from '@vorklee2/core-utils';
 
 export interface AuditEvent {
   organizationId: string;
@@ -60,4 +60,5 @@ export function createAuditEvent(
     timestamp: new Date(),
   };
 }
+
 

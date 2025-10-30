@@ -2,13 +2,14 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   transpilePackages: [
-    '@core-auth',
-    '@core-utils',
-    '@core-audit',
-    '@core-analytics',
-    '@core-billing',
+    '@vorklee2/core-auth',
+    '@vorklee2/core-utils',
+    '@vorklee2/core-audit',
+    '@vorklee2/core-analytics',
+    '@vorklee2/core-billing',
   ],
 };
 
 export default nextConfig;
+
 

@@ -11,11 +11,11 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@core-auth": "*",
-    "@core-utils": "*",
-    "@core-audit": "*",
-    "@core-analytics": "*",
-    "@core-billing": "*",
+    "@vorklee2/core-auth": "*",
+    "@vorklee2/core-utils": "*",
+    "@vorklee2/core-audit": "*",
+    "@vorklee2/core-analytics": "*",
+    "@vorklee2/core-billing": "*",
     "next": "^15.1.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -36,7 +36,8 @@
     "typescript": "^5.6.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.4",
-    "drizzle-kit": "^0.29.2"
+    "drizzle-kit": "^0.28.1"
   }
 }
+
 

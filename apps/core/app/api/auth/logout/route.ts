@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { clearSessionCookie } from '@core-auth';
+import { clearSessionCookie } from '@vorklee2/core-auth';
 
 export async function POST() {
   try {
@@ -13,4 +13,5 @@ export async function POST() {
     );
   }
 }
+
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateToken, setSessionCookie, verifyPassword } from '@core-auth';
+import { generateToken, setSessionCookie, verifyPassword } from '@vorklee2/core-auth';
 import { db } from '@/db/db';
 import { globalUsers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -63,4 +63,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
