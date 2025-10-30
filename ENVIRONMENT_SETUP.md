@@ -1,4 +1,4 @@
-# 🔧 Environment Setup Guide
+# 🔧 Environment Setup Guide.
 
 ## ⚠️ IMPORTANT: Create `.env.local` Files
 
