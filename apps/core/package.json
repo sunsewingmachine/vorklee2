@@ -11,31 +11,30 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@vorklee2/core-auth": "*",
-    "@vorklee2/core-utils": "*",
-    "@vorklee2/core-audit": "*",
-    "@vorklee2/core-analytics": "*",
-    "@vorklee2/core-billing": "*",
-    "next": "^15.1.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "drizzle-orm": "^0.36.4",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.3.0",
+    "@mui/material": "^6.3.0",
     "@neondatabase/serverless": "^0.10.3",
     "@tanstack/react-query": "^5.62.8",
-    "@mui/material": "^6.3.0",
-    "@mui/icons-material": "^6.3.0",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0"
+    "@vorklee2/core-analytics": "*",
+    "@vorklee2/core-audit": "*",
+    "@vorklee2/core-auth": "*",
+    "@vorklee2/core-billing": "*",
+    "@vorklee2/core-utils": "*",
+    "drizzle-orm": "^0.36.4",
+    "next": "^15.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.6.0",
+    "dotenv": "^17.2.3",
+    "drizzle-kit": "^0.28.1",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.4",
-    "drizzle-kit": "^0.28.1"
+    "typescript": "^5.6.0"
   }
 }
-
-
