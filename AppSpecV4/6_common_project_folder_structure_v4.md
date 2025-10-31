@@ -98,12 +98,16 @@ apps/[app-name]/
 
 Each app has its own `.env.local` file:
 
-| File | Scope | Key Examples |
+| File | Scope | Key Variables |
 |------|--------|--------------|
-| `apps/core/.env.local` | Core Platform | `DATABASE_URL_CORE`, `STRIPE_SECRET`, `JWT_SECRET` |
-| `apps/notes/.env.local` | Notes App | `DATABASE_URL_NOTES`, `CORE_API_URL` |
-| `apps/attendance/.env.local` | Attendance App | `DATABASE_URL_ATTENDANCE`, `CORE_API_URL` |
-| `apps/hr/.env.local` | HR App | `DATABASE_URL_HR`, `CORE_API_URL` |
+| `apps/core/.env.local` | Core Platform | `DATABASE_URL_CORE`, `JWT_SECRET`, `STRIPE_SECRET`, `REDIS_URL`, `NEXT_PUBLIC_PLATFORM_URL` |
+| `apps/notes/.env.local` | Notes App | `DATABASE_URL_NOTES`, `CORE_API_URL`, `REDIS_URL`, `NEXT_PUBLIC_APP_URL`, `FILE_STORAGE_URL` |
+| `apps/attendance/.env.local` | Attendance App | `DATABASE_URL_ATTENDANCE`, `CORE_API_URL`, `NEXT_PUBLIC_APP_URL` |
+| `apps/hr/.env.local` | HR App | `DATABASE_URL_HR`, `CORE_API_URL`, `NEXT_PUBLIC_APP_URL` |
+
+**Naming Convention:**
+- Core Platform uses: `DATABASE_URL_CORE`, `JWT_SECRET`, `STRIPE_SECRET`, `REDIS_URL`, `NEXT_PUBLIC_PLATFORM_URL`
+- App Modules use: `DATABASE_URL_[APP_NAME]`, `CORE_API_URL`, `REDIS_URL`, `NEXT_PUBLIC_APP_URL`, `FILE_STORAGE_URL` (optional)
 
 All environment files are ignored by Git and stored securely in CI/CD.
 

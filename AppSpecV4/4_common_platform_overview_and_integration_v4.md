@@ -65,21 +65,66 @@ Each app runs on its own Neon DB branch but integrates tightly through Core APIs
 
 Each app and the Core have separate `.env.local` files.
 
+### Environment Variable Naming Standards
+
+All environment variables follow these conventions:
+- **Database URLs**: `DATABASE_URL_[APP_NAME]` (e.g., `DATABASE_URL_CORE`, `DATABASE_URL_NOTES`)
+- **API URLs**: `CORE_API_URL` for Core Platform endpoints
+- **Public URLs**: `NEXT_PUBLIC_[NAME]` for client-accessible variables
+- **Secrets**: No `NEXT_PUBLIC_` prefix for server-only secrets
+- **Service URLs**: `[SERVICE]_URL` pattern (e.g., `REDIS_URL`, `FILE_STORAGE_URL`)
+
 ### Core Platform `.env.local`
 ```bash
+# Database
 DATABASE_URL_CORE=postgresql://user:pass@host/core
-STRIPE_SECRET=sk_live_...
-REDIS_URL=redis://user:pass@host:port
-NEXT_PUBLIC_PLATFORM_URL=https://vorklee2.com
+
+# Authentication
 JWT_SECRET=supersecret
+
+# Billing
+STRIPE_SECRET=sk_live_...
+
+# Infrastructure
+REDIS_URL=redis://user:pass@host:port
+
+# Public URLs (client-accessible)
+NEXT_PUBLIC_PLATFORM_URL=https://vorklee2.com
 ```
 
-### Notes App `.env.local`
+### App Module `.env.local` (Example: Notes App)
 ```bash
+# Database
 DATABASE_URL_NOTES=postgresql://user:pass@host/notes
+
+# Core Integration
 CORE_API_URL=https://vorklee2.com/api/core
+
+# Infrastructure
+REDIS_URL=redis://user:pass@host:port
+
+# Public URLs (client-accessible)
 NEXT_PUBLIC_APP_URL=https://notes.vorklee2.com
+
+# Storage (if app uses file uploads)
+FILE_STORAGE_URL=https://cdn.vorklee2.com
 ```
+
+### Complete Environment Variable Reference
+
+| Variable | Scope | Required | Description | Example |
+|----------|-------|----------|-------------|---------|
+| `DATABASE_URL_CORE` | Core | ✅ | Core Platform database connection | `postgresql://user:pass@host/core` |
+| `DATABASE_URL_[APP]` | App | ✅ | App-specific database connection | `DATABASE_URL_NOTES`, `DATABASE_URL_ATTENDANCE` |
+| `JWT_SECRET` | Core | ✅ | Secret for signing JWT tokens | `supersecret` |
+| `STRIPE_SECRET` | Core | ✅ | Stripe API secret key | `sk_live_...` |
+| `REDIS_URL` | Both | ✅ | Redis connection string | `redis://user:pass@host:port` |
+| `CORE_API_URL` | App | ✅ | Base URL for Core Platform APIs | `https://vorklee2.com/api/core` |
+| `NEXT_PUBLIC_PLATFORM_URL` | Core | ✅ | Public platform URL | `https://vorklee2.com` |
+| `NEXT_PUBLIC_APP_URL` | App | ✅ | Public app URL | `https://notes.vorklee2.com` |
+| `FILE_STORAGE_URL` | App | ⚠️ | CDN/S3 URL for file uploads | `https://cdn.vorklee2.com` |
+
+**Note**: Replace `[APP]` with the app name in uppercase (e.g., `NOTES`, `ATTENDANCE`, `HR`).
 
 ---
 

@@ -116,39 +116,13 @@ DATABASE_URL_ATTENDANCE=postgresql://user:pass@vorklee2-attendance-db.neon.tech/
 DATABASE_URL_HR=postgresql://user:pass@vorklee2-hr-db.neon.tech/hr
 ```
 
-Use these in each app’s `.env.local` file.
+Use these in each app's `.env.local` file.
+
+**Note:** For complete environment variable setup, naming standards, and all required variables, see **Section 3: Environment Setup** in `04_Common_Platform_Overview_and_Integration.md`.
 
 ---
 
-## 🧮 6. Example .env Files
-
-### Core Platform
-```bash
-DATABASE_URL_CORE=postgresql://user:pass@vorklee2-core-db.neon.tech/core
-STRIPE_SECRET=sk_live_...
-REDIS_URL=redis://user:pass@host:port
-JWT_SECRET=supersecret
-NEXT_PUBLIC_PLATFORM_URL=https://vorklee2.com
-```
-
-### Notes App
-```bash
-DATABASE_URL_NOTES=postgresql://user:pass@vorklee2-notes-db.neon.tech/notes
-CORE_API_URL=https://vorklee2.com/api/core
-NEXT_PUBLIC_APP_URL=https://notes.vorklee2.com
-REDIS_URL=redis://user:pass@host:port
-```
-
-### Attendance App
-```bash
-DATABASE_URL_ATTENDANCE=postgresql://user:pass@vorklee2-attendance-db.neon.tech/attendance
-CORE_API_URL=https://vorklee2.com/api/core
-NEXT_PUBLIC_APP_URL=https://attendance.vorklee2.com
-```
-
----
-
-## 🧠 7. Drizzle ORM Configuration
+## 🧠 6. Drizzle ORM Configuration
 
 Each app connects using its dedicated branch:
 
@@ -168,7 +142,7 @@ export default db;
 
 ---
 
-## 💾 8. Backup and PITR Strategy
+## 💾 7. Backup and PITR Strategy
 
 Neon automatically enables **Point-in-Time Recovery (PITR)** for each branch.  
 For manual snapshots:
@@ -191,7 +165,7 @@ neonctl backups create --project vorklee2 --branch notes-db
 
 ---
 
-## 🧾 9. Security & Access Controls
+## 🧾 8. Security & Access Controls
 
 - Rotate DB passwords every 90 days.  
 - Restrict connections to app servers (Neon IP allowlist).  
@@ -201,7 +175,7 @@ neonctl backups create --project vorklee2 --branch notes-db
 
 ---
 
-## ⚡ 10. Performance Optimization
+## ⚡ 9. Performance Optimization
 
 | Optimization | Recommendation |
 |---------------|----------------|
@@ -214,7 +188,7 @@ neonctl backups create --project vorklee2 --branch notes-db
 
 ---
 
-## 🔁 11. Automation Script Example
+## 🔁 10. Automation Script Example
 
 A simple reusable shell script for app onboarding:
 
@@ -231,7 +205,7 @@ Add this script to your CI/CD pipeline for automated app provisioning.
 
 ---
 
-## 🌍 12. Multi-Region Setup (Enterprise)
+## 🌍 11. Multi-Region Setup (Enterprise)
 
 For large-scale deployments, maintain separate projects per region:
 

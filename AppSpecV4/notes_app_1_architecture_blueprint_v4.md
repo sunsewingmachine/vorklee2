@@ -237,11 +237,22 @@ export async function POST(req: NextRequest) {
 
 ## 🧩 11. Environment Variables
 
+All environment variables follow the **Vorklee2 naming standards** (see `04_Common_Platform_Overview_and_Integration.md`).
+
 ```bash
+# Database
 DATABASE_URL_NOTES=postgresql://user:pass@host/notes
+
+# Core Integration
 CORE_API_URL=https://vorklee2.com/api/core
+
+# Infrastructure
 REDIS_URL=redis://user:pass@host:port
+
+# Public URLs (client-accessible)
 NEXT_PUBLIC_APP_URL=https://notes.vorklee2.com
+
+# Storage (for file uploads)
 FILE_STORAGE_URL=https://cdn.vorklee2.com
 ```
 
