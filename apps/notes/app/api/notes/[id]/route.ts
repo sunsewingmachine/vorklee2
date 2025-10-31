@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getUserAuth } from '@vorklee2/core-auth';
 import { checkSubscription } from '@vorklee2/core-billing';
 import { recordAudit, createAuditEvent } from '@vorklee2/core-audit';
 import { getNoteById, updateNote, deleteNote } from '@/services/notes.service';
 import { updateNoteSchema } from '@/lib/validations/notes';
+import { successResponse, errorResponse, createError } from '@/lib/api-response';
 
 /**
  * GET /api/notes/[id] - Get a single note
@@ -27,15 +28,15 @@ export async function GET(
     const note = await getNoteById(id, orgId);
 
     if (!note) {
-      return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+      return errorResponse(createError('NOT_FOUND', 'Note not found'), request, 404);
     }
 
-    return NextResponse.json({ note });
+    return successResponse(note, request);
   } catch (error) {
-    console.error('Get note error:', error);
-    return NextResponse.json(
-      { error: `Failed to fetch note: ${error instanceof Error ? error.message : 'Unknown error'}` },
-      { status: 500 }
+    return errorResponse(
+      createError('INTERNAL_ERROR', `Failed to fetch note: ${error instanceof Error ? error.message : 'Unknown error'}`),
+      request,
+      500
     );
   }
 }
@@ -67,7 +68,7 @@ export async function PATCH(
     const note = await updateNote(id, validatedData, orgId);
 
     if (!note) {
-      return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+      return errorResponse(createError('NOT_FOUND', 'Note not found'), request, 404);
     }
 
     if (!skipAuth) {
@@ -79,20 +80,20 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json({ note });
+    return successResponse(note, request);
   } catch (error) {
-    console.error('Update note error:', error);
-
     if (error instanceof Error && error.name === 'ZodError') {
-      return NextResponse.json(
-        { error: 'Validation failed', details: error.message },
-        { status: 400 }
+      return errorResponse(
+        createError('VALIDATION_ERROR', 'Validation failed', { message: error.message }),
+        request,
+        400
       );
     }
 
-    return NextResponse.json(
-      { error: `Failed to update note: ${error instanceof Error ? error.message : 'Unknown error'}` },
-      { status: 500 }
+    return errorResponse(
+      createError('INTERNAL_ERROR', `Failed to update note: ${error instanceof Error ? error.message : 'Unknown error'}`),
+      request,
+      500
     );
   }
 }
@@ -120,7 +121,7 @@ export async function DELETE(
     const note = await deleteNote(id, orgId);
 
     if (!note) {
-      return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+      return errorResponse(createError('NOT_FOUND', 'Note not found'), request, 404);
     }
 
     if (!skipAuth) {
@@ -130,12 +131,12 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({ success: true });
+    return successResponse({ id: note.id, message: 'Note deleted successfully' }, request);
   } catch (error) {
-    console.error('Delete note error:', error);
-    return NextResponse.json(
-      { error: `Failed to delete note: ${error instanceof Error ? error.message : 'Unknown error'}` },
-      { status: 500 }
+    return errorResponse(
+      createError('INTERNAL_ERROR', `Failed to delete note: ${error instanceof Error ? error.message : 'Unknown error'}`),
+      request,
+      500
     );
   }
 }
