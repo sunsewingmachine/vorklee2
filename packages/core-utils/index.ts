@@ -16,13 +16,30 @@ export const logger = {
 
 // Redis client singleton
 let redisClient: Redis | null = null;
+let useMockRedis = false;
+
+export function isUsingMockRedis(): boolean {
+  return useMockRedis;
+}
 
 export function getRedisClient(): Redis {
+  if (useMockRedis) {
+    // Return mock client immediately
+    return {
+      get: async () => null,
+      set: async () => 'OK',
+      setex: async () => 'OK',
+      del: async () => 0,
+      keys: async () => [],
+    } as any;
+  }
+
   if (!redisClient) {
     const redisUrl = process.env.REDIS_URL;
     if (!redisUrl) {
       // In development, return a mock client instead of throwing
       logger.warn('REDIS_URL not set, using mock Redis client');
+      useMockRedis = true;
       return {
         get: async () => null,
         set: async () => 'OK',
@@ -31,7 +48,29 @@ export function getRedisClient(): Redis {
         keys: async () => [],
       } as any;
     }
-    redisClient = new Redis(redisUrl);
+
+    // Configure Redis with fast fail settings for development
+    redisClient = new Redis(redisUrl, {
+      maxRetriesPerRequest: 1, // Only retry once
+      connectTimeout: 1000, // 1 second timeout
+      retryStrategy(times) {
+        if (times > 3) {
+          // Switch to mock after 3 failed attempts
+          logger.warn('Redis connection failed, switching to mock client');
+          useMockRedis = true;
+          return null; // Stop retrying
+        }
+        return Math.min(times * 50, 500); // Max 500ms between retries
+      },
+      lazyConnect: true, // Don't connect immediately
+    });
+
+    // Try to connect, but use mock if it fails
+    redisClient.connect().catch((err) => {
+      logger.warn('Redis connection failed, using mock client', err.message);
+      useMockRedis = true;
+      redisClient = null;
+    });
   }
   return redisClient;
 }
@@ -46,6 +85,17 @@ export interface RateLimiterConfig {
 export function createRateLimiter(config: RateLimiterConfig) {
   try {
     const redis = getRedisClient();
+
+    // If using mock Redis, return a no-op limiter
+    if (isUsingMockRedis()) {
+      logger.warn('Using mock Redis, rate limiter disabled');
+      return {
+        consume: async () => ({ remainingPoints: config.points }),
+        delete: async () => {},
+        reset: async () => {},
+      } as any;
+    }
+
     return new RateLimiterRedis({
       storeClient: redis,
       points: config.points,
@@ -56,7 +106,7 @@ export function createRateLimiter(config: RateLimiterConfig) {
     // Return a no-op limiter if Redis is not available
     logger.warn('Redis not available, rate limiter disabled');
     return {
-      consume: async () => {},
+      consume: async () => ({ remainingPoints: config.points }),
       delete: async () => {},
       reset: async () => {},
     } as any;
