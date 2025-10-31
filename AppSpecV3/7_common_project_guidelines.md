@@ -222,14 +222,117 @@ Each app must include:
 
 ---
 
-### 📄 Version
+🧩 16. Modular Dashboard Architecture
 
-**Template Version:** 2.0  
-**Framework:** Next.js 14+ (Turborepo)  
-**Platform:** Vorklee2 Multi-App SaaS  
-**Maintainer:** Vorklee2 DevOps Team  
-**Last Updated:** _(auto-sync per project)_
+The Vorklee2 platform implements a Modular Dashboard Architecture, allowing dynamic rendering of apps, menus, and settings based on each client’s purchased modules.
 
----
+Overview
 
-> Copy this file as `PROJECT_GUIDELINES.md` into every app within `apps/` to maintain consistent standards across the platform.
+Each client account has access to a different set of purchased modules (apps), such as Notes, Attendance, Catalog, HR, etc.
+The system automatically builds the main dashboard and settings page according to the modules the client owns.
+
+Core Principles
+
+Global Menus (Always Visible)
+
+Users
+
+Settings
+
+Logout
+
+Help (optional)
+
+Dynamic Module Menus
+
+Each purchased module contributes its own sidebar menus and submenus.
+Example:
+
+If a client has Notes and Attendance, only those menus appear in the sidebar.
+
+If another client owns Catalog and HR, their sidebar reflects that combination.
+
+Shared Settings Page
+
+The Settings page includes default tabs:
+
+Language
+
+Currency
+
+Time Zone
+
+Theme
+
+Each module may register additional tabs (e.g., “Notes Preferences”, “Attendance Rules”).
+
+Backend Enforcement
+
+The backend determines module entitlements and permissions.
+
+The frontend must only display what the backend confirms to prevent unauthorized access.
+
+Pluggable Module Design
+
+Each module must self-register its:
+
+Menu items
+
+Routes/pages
+
+Settings tabs
+
+API endpoints
+
+Dashboard Shell Responsibilities
+
+Render the main layout (sidebar, header, content).
+
+Load and unload modules dynamically.
+
+Maintain global state (user, permissions, theme, settings).
+
+Provide communication hooks for modules (events, APIs, context).
+
+Performance Optimization
+
+Use lazy loading or micro-frontend principles to load each module only when needed.
+
+This ensures scalability across multiple apps and minimal initial bundle size.
+
+Implementation Notes
+
+Define module metadata in a config file, such as:
+
+/core/config/modules.ts
+
+
+The dashboard reads this config and dynamically builds UI components.
+
+Example structure:
+
+export const modules = {
+  notes: {
+    enabled: true,
+    menus: ["All Notes", "Notebooks", "Tags"],
+    settingsTabs: ["Notes Preferences"],
+  },
+  attendance: {
+    enabled: false,
+    menus: ["Attendance Log", "Reports"],
+    settingsTabs: ["Attendance Rules"],
+  },
+  catalog: {
+    enabled: true,
+    menus: ["Items", "Categories", "Suppliers"],
+    settingsTabs: ["Catalog Settings"],
+  },
+};
+
+📄 Version
+
+Template Version: 2.1
+Framework: Next.js 14+ (Turborepo)
+Platform: Vorklee2 Multi-App SaaS
+Maintainer: Vorklee2 DevOps Team
+Last Updated: (auto-sync per project)
