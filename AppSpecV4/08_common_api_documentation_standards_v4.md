@@ -22,12 +22,25 @@ It ensures consistency, security, and developer experience across all REST endpo
 
 ## 🧱 1. API Endpoint Naming Conventions
 
+### API Versioning Strategy
+
+All APIs use **URL-based versioning** for backward compatibility:
+
+- **Core Platform APIs**: `/api/v1/core/[resource]`
+- **App Module APIs**: `/api/v1/[resource]`
+
+**Version Policy:**
+- Current version: `v1` (default, can be omitted for backward compatibility)
+- Breaking changes require new version (`v2`, `v3`, etc.)
+- Deprecated versions maintained for minimum 6 months
+- Deprecation warnings included in `X-API-Deprecated` header
+
 ### Core Platform APIs
-- Base Path: `/api/core/[resource]`
+- Base Path: `/api/v1/core/[resource]` or `/api/core/[resource]` (v1 default)
 - Example: `/api/core/auth/login`, `/api/core/billing/subscriptions`
 
 ### App Module APIs
-- Base Path: `/api/[resource]`
+- Base Path: `/api/v1/[resource]` or `/api/[resource]` (v1 default)
 - Example: `/api/notes`, `/api/notes/:id`
 
 ### Naming Rules
@@ -114,7 +127,7 @@ All POST/PATCH requests should accept JSON:
 }
 ```
 
-#### Success Response (List - 200)
+#### Success Response (List - 200) with HATEOAS Links
 ```json
 {
   "data": [
@@ -125,13 +138,30 @@ All POST/PATCH requests should accept JSON:
     "page": 1,
     "limit": 20,
     "total": 100,
-    "totalPages": 5
+    "totalPages": 5,
+    "hasNext": true,
+    "hasPrev": false
+  },
+  "links": {
+    "self": "/api/v1/notes?page=1&limit=20",
+    "first": "/api/v1/notes?page=1&limit=20",
+    "last": "/api/v1/notes?page=5&limit=20",
+    "prev": null,
+    "next": "/api/v1/notes?page=2&limit=20"
   },
   "meta": {
-    "timestamp": "2024-01-01T00:00:00Z"
+    "timestamp": "2024-01-01T00:00:00Z",
+    "requestId": "550e8400-e29b-41d4-a716-446655440000"
   }
 }
 ```
+
+**HATEOAS Links:**
+- `self`: Current page URL
+- `first`: First page URL (may be same as `self` if on first page)
+- `last`: Last page URL
+- `prev`: Previous page URL (null if on first page)
+- `next`: Next page URL (null if on last page)
 
 #### Error Response (4xx/5xx)
 ```json
@@ -139,14 +169,20 @@ All POST/PATCH requests should accept JSON:
   "error": {
     "message": "Human-readable error message",
     "code": "ERROR_CODE",
-    "details": {}
+    "details": {},
+    "retryable": false
   },
   "meta": {
     "timestamp": "2024-01-01T00:00:00Z",
-    "requestId": "uuid"
+    "requestId": "550e8400-e29b-41d4-a716-446655440000",
+    "status": 400
   }
 }
 ```
+
+**Error Fields:**
+- `retryable`: Boolean indicating if the error is transient and retryable (e.g., `DATABASE_ERROR`, `RATE_LIMIT_EXCEEDED`)
+- `status`: HTTP status code included in meta for convenience
 
 ---
 
@@ -170,6 +206,9 @@ Brief description of the endpoint's purpose.
 |--------|------|----------|-------------|
 | `Authorization` | string | ✅ | JWT token in cookie or header |
 | `Content-Type` | string | ✅ | `application/json` |
+| `X-Request-ID` | string | ❌ | Optional correlation ID for request tracking (UUID format) |
+
+**Note:** If `X-Request-ID` is not provided, the server will generate one and include it in response headers.
 
 ### Request Body
 | Field | Type | Required | Description |
@@ -553,16 +592,25 @@ try {
 
 ### Standard Error Codes
 
-| Code | Description |
-|------|-------------|
-| `VALIDATION_ERROR` | Request validation failed |
-| `AUTH_FAILED` | Authentication failed |
-| `FORBIDDEN` | Insufficient permissions |
-| `NOT_FOUND` | Resource not found |
-| `CONFLICT` | Resource conflict |
-| `RATE_LIMIT_EXCEEDED` | Too many requests |
-| `DATABASE_ERROR` | Database operation failed |
-| `INTERNAL_ERROR` | Unexpected server error |
+| Code | Description | Retryable | HTTP Status |
+|------|-------------|-----------|-------------|
+| `VALIDATION_ERROR` | Request validation failed | ❌ | 400 |
+| `AUTH_FAILED` | Authentication failed | ❌ | 401 |
+| `UNAUTHORIZED` | Missing or invalid authentication | ❌ | 401 |
+| `INSUFFICIENT_PERMISSIONS` | Authenticated but insufficient permissions | ❌ | 403 |
+| `FORBIDDEN` | Access denied to resource | ❌ | 403 |
+| `SUBSCRIPTION_REQUIRED` | Active subscription required for this feature | ❌ | 402 |
+| `NOT_FOUND` | Resource not found | ❌ | 404 |
+| `CONFLICT` | Resource conflict (e.g., duplicate entry) | ❌ | 409 |
+| `RATE_LIMIT_EXCEEDED` | Too many requests | ✅ | 429 |
+| `DATABASE_ERROR` | Database operation failed | ✅ | 500 |
+| `INTERNAL_ERROR` | Unexpected server error | ✅ | 500 |
+| `SERVICE_UNAVAILABLE` | External service unavailable | ✅ | 503 |
+
+**Retryable Errors:**
+- Errors marked as `retryable: true` are transient and may succeed on retry
+- Clients should implement exponential backoff for retryable errors
+- Maximum retry attempts: 3 with exponential backoff (1s, 2s, 4s)
 
 ---
 
@@ -570,23 +618,45 @@ try {
 
 All endpoints should implement rate limiting via `@core-utils/rateLimiter`.
 
+### Rate Limiting Strategy
+
+Rate limits are applied per **organization ID** (not per IP) to ensure tenant fairness.
+
 ### Standard Limits
 
-| Endpoint Type | Limit | Window |
-|---------------|-------|--------|
-| Authentication | 10 requests | 5 minutes |
-| CRUD Operations | 100 requests | 1 minute |
-| Search/Query | 200 requests | 1 minute |
-| File Upload | 50 requests | 1 minute |
+| Endpoint Type | Free Plan | Pro Plan | Business Plan | Enterprise Plan |
+|---------------|-----------|----------|---------------|-----------------|
+| Authentication | 10 requests | 20 requests | 50 requests | Unlimited |
+| CRUD Operations | 100 requests | 500 requests | 2000 requests | Unlimited |
+| Search/Query | 50 requests | 200 requests | 1000 requests | Unlimited |
+| File Upload | 20 requests | 50 requests | 200 requests | Unlimited |
+| Window Duration | 1 minute | 1 minute | 1 minute | N/A |
+
+### Burst Allowance
+
+Each subscription tier includes a **burst allowance** for short spikes:
+- **Free**: +10 requests above limit (grace period)
+- **Pro**: +50 requests above limit
+- **Business**: +200 requests above limit
+- **Enterprise**: No burst limit (unlimited)
+
+Burst requests are tracked separately and reset every 10 minutes.
 
 ### Rate Limit Headers
 
-Response headers include:
+All responses include rate limit headers:
 ```
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
 X-RateLimit-Reset: 1704110400
+X-RateLimit-Used: 5
 ```
+
+**Header Definitions:**
+- `X-RateLimit-Limit`: Maximum number of requests allowed in the window
+- `X-RateLimit-Remaining`: Number of requests remaining in current window
+- `X-RateLimit-Reset`: Unix timestamp when the rate limit window resets
+- `X-RateLimit-Used`: Number of requests used in current window
 
 ### Rate Limit Exceeded Response
 
@@ -607,8 +677,12 @@ X-RateLimit-Reset: 1704110400
 ### Query Parameters
 - `page`: Page number (starts at 1)
 - `limit`: Items per page (default: 20, max: 100)
+- `cursor`: Optional cursor for cursor-based pagination (alternative to offset pagination)
 
-### Response Format
+### Offset-Based Pagination (Default)
+
+Standard pagination using page numbers:
+
 ```json
 {
   "data": [...],
@@ -619,9 +693,47 @@ X-RateLimit-Reset: 1704110400
     "totalPages": 5,
     "hasNext": true,
     "hasPrev": false
+  },
+  "links": {
+    "self": "/api/v1/notes?page=1&limit=20",
+    "first": "/api/v1/notes?page=1&limit=20",
+    "last": "/api/v1/notes?page=5&limit=20",
+    "prev": null,
+    "next": "/api/v1/notes?page=2&limit=20"
   }
 }
 ```
+
+### Cursor-Based Pagination (Alternative)
+
+For large datasets or real-time data, cursor-based pagination is available:
+
+**Request:**
+```
+GET /api/v1/notes?limit=20&cursor=eyJpZCI6InV1aWQxIiwidGltZXN0YW1wIjoiMjAyNC0wMS0wMVQwMDowMDowMFoifQ==
+```
+
+**Response:**
+```json
+{
+  "data": [...],
+  "pagination": {
+    "limit": 20,
+    "hasNext": true,
+    "hasPrev": false,
+    "cursor": "eyJpZCI6InV1aWQyIiwidGltZXN0YW1wIjoiMjAyNC0wMS0wMVQwMDowMDoxMFoifQ==",
+    "nextCursor": "eyJpZCI6InV1aWQyIiwidGltZXN0YW1wIjoiMjAyNC0wMS0wMVQwMDowMDoxMFoifQ=="
+  },
+  "links": {
+    "self": "/api/v1/notes?limit=20&cursor=...",
+    "next": "/api/v1/notes?limit=20&cursor=..."
+  }
+}
+```
+
+**When to Use:**
+- **Offset pagination**: Small to medium datasets, predictable ordering, simple implementation
+- **Cursor pagination**: Large datasets (>10K records), real-time data, performance-critical endpoints
 
 ---
 
@@ -700,14 +812,43 @@ fetch('/api/notes/uuid/attachments', {
 
 ---
 
+## 🔗 13. Request ID and Correlation Tracking
+
+### Request ID Header
+
+All API responses include a `X-Request-ID` header for request correlation:
+
+```
+X-Request-ID: 550e8400-e29b-41d4-a716-446655440000
+```
+
+**Usage:**
+- Clients can provide `X-Request-ID` in request headers for end-to-end tracking
+- If not provided, server generates a UUID
+- Request ID is included in all logs, error responses, and analytics events
+- Enables distributed tracing across services
+
+### Correlation ID Pattern
+
+Request IDs follow this flow:
+1. Client generates UUID (optional)
+2. Server uses provided ID or generates one
+3. Request ID propagated through all service calls
+4. Included in audit logs, error logs, and analytics events
+5. Returned to client in response headers and error meta
+
+---
+
 ## ✅ Summary
 
 The **API Documentation Standards (v4.0)** ensure all Core and App APIs follow consistent patterns for:
 - Authentication and authorization
-- Request/response formatting
-- Error handling
-- Rate limiting
-- Pagination and filtering
+- Request/response formatting with HATEOAS links
+- Error handling with retryable indicators
+- Tiered rate limiting per subscription plan
+- Pagination (offset and cursor-based)
+- Request correlation and tracing
+- API versioning and backward compatibility
 - File uploads
 
 All API endpoints must be documented using these standards to maintain consistency and developer experience across the Vorklee2 ecosystem.

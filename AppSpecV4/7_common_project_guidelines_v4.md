@@ -105,13 +105,102 @@ Test areas:
 
 ## 🔐 6. Security & Compliance
 
+### Authentication & Authorization
 - Always use `@core-auth` for login/session validation.  
 - Enforce **row-level isolation** (`organizationId`) in every table.  
-- Sanitize all inputs & outputs.  
+- Never trust client-provided `userId` or `organizationId` - derive from session.
 - Use **HTTPS**, **secure cookies**, **JWT HMAC SHA256** signatures.  
+
+### Input Validation & Sanitization
+- **All user inputs must be validated** using Zod schemas before processing.
+- Sanitize all outputs to prevent XSS attacks.
+- Use **parameterized queries** (Drizzle ORM handles this automatically).
+- Never concatenate user input into SQL queries.
+- Validate file uploads: MIME type, file size, file extension.
+
+### CORS Configuration
+
+All API routes must configure CORS appropriately:
+
+```ts
+// next.config.ts
+const nextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: process.env.NEXT_PUBLIC_APP_URL || '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, PATCH, DELETE, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Request-ID' },
+        ],
+      },
+    ];
+  },
+};
+```
+
+**CORS Policy:**
+- Development: Allow all origins (`*`)
+- Production: Restrict to specific allowed origins
+- Always include credentials when using cookies
+
+### Content Security Policy (CSP)
+
+All apps must implement CSP headers:
+
+```ts
+// middleware.ts or next.config.ts
+const securityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self'",
+      "connect-src 'self' https://api.vorklee2.com",
+    ].join('; '),
+  },
+  {
+    key: 'X-Frame-Options',
+    value: 'DENY',
+  },
+  {
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
+  },
+  {
+    key: 'Referrer-Policy',
+    value: 'strict-origin-when-cross-origin',
+  },
+];
+```
+
+### SQL Injection Prevention
+
+- **Drizzle ORM automatically uses parameterized queries** - never bypass this.
+- Never use raw SQL with string interpolation.
+- Always validate and sanitize inputs before database operations.
+
+### Secrets Management
+
 - Store env vars only in `.env.local` or CI/CD secrets.  
+- **Never commit secrets** to version control.
+- Use secrets management tools in production:
+  - **Vercel**: Built-in environment variables
+  - **AWS**: AWS Secrets Manager
+  - **Azure**: Azure Key Vault
+- Rotate secrets regularly (JWT_SECRET, database passwords, API keys).
+
+### Compliance & Auditing
+
 - Log all write operations via `@core-audit`.  
 - Run **dependency vulnerability scans** monthly.
+- Maintain audit trails for compliance (GDPR, SOC 2, etc.).
+- Implement data retention policies per compliance requirements.
 
 ---
 

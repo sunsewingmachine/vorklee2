@@ -123,8 +123,96 @@ FILE_STORAGE_URL=https://cdn.vorklee2.com
 | `NEXT_PUBLIC_PLATFORM_URL` | Core | ✅ | Public platform URL | `https://vorklee2.com` |
 | `NEXT_PUBLIC_APP_URL` | App | ✅ | Public app URL | `https://notes.vorklee2.com` |
 | `FILE_STORAGE_URL` | App | ⚠️ | CDN/S3 URL for file uploads | `https://cdn.vorklee2.com` |
+| `VALIDATE_ENV` | Both | ❌ | Enable strict environment validation on startup | `true` (default: `false`) |
 
 **Note**: Replace `[APP]` with the app name in uppercase (e.g., `NOTES`, `ATTENDANCE`, `HR`).
+
+### Environment Variable Validation
+
+All apps must validate required environment variables on startup to fail fast with clear error messages.
+
+**Validation Pattern:**
+
+```ts
+// lib/env-validation.ts (shared utility)
+import { logger } from "@core-utils";
+
+interface EnvConfig {
+  required: string[];
+  optional?: Record<string, string>; // key -> default value
+}
+
+export function validateEnvironment(config: EnvConfig): void {
+  const missing: string[] = [];
+  
+  for (const key of config.required) {
+    if (!process.env[key]) {
+      missing.push(key);
+    }
+  }
+  
+  if (missing.length > 0) {
+    const error = `Missing required environment variables: ${missing.join(", ")}`;
+    logger.error(error);
+    throw new Error(error);
+  }
+  
+  // Set optional defaults
+  if (config.optional) {
+    for (const [key, defaultValue] of Object.entries(config.optional)) {
+      if (!process.env[key]) {
+        process.env[key] = defaultValue;
+      }
+    }
+  }
+  
+  logger.info("Environment validation passed");
+}
+```
+
+**Usage Example:**
+
+```ts
+// apps/notes/lib/env-validation.ts
+import { validateEnvironment } from "@core-utils";
+
+validateEnvironment({
+  required: [
+    "DATABASE_URL_NOTES",
+    "CORE_API_URL",
+    "REDIS_URL",
+    "NEXT_PUBLIC_APP_URL"
+  ],
+  optional: {
+    "FILE_STORAGE_URL": "https://cdn.vorklee2.com",
+    "VALIDATE_ENV": "false"
+  }
+});
+```
+
+### Secrets Management
+
+**Development:**
+- Store secrets in `.env.local` files (gitignored)
+- Never commit `.env.local` or `.env` files
+
+**Production:**
+- Use platform-native secrets management:
+  - **Vercel**: Environment variables in dashboard or CLI
+  - **AWS**: AWS Secrets Manager with IAM roles
+  - **Azure**: Azure Key Vault
+  - **GCP**: Secret Manager
+- Rotate secrets regularly (90 days for JWT_SECRET, 180 days for API keys)
+- Use different secrets per environment (dev, staging, prod)
+- Audit secret access logs monthly
+
+**Secrets Rotation Checklist:**
+- [ ] JWT_SECRET rotated
+- [ ] Database passwords rotated
+- [ ] API keys (Stripe, etc.) rotated
+- [ ] Redis credentials rotated
+- [ ] CDN/storage credentials rotated
+- [ ] All apps redeployed with new secrets
 
 ---
 
