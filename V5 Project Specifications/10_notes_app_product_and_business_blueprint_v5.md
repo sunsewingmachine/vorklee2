@@ -151,7 +151,7 @@ All AI processes respect GDPR and anonymize data before model input.
 ## ✅ 10. Summary
 
 The **Vorklee Notes App** delivers an enterprise-ready, AI-enhanced knowledge management solution built for security, collaboration, and scalability.  
-Its modular structure under the multi-project Neon architecture ensures long-term growth, compliance, and seamless integration with the rest of the Vorklee2 ecosystem.
+Its modular structure under the multi-project Neon architecture ensures long-term growth, compliance and seamless integration with the rest of the Vorklee2 ecosystem.
 
 ---
 
