@@ -113,14 +113,54 @@ Commit → CI Tests → Migrate DB → Deploy App → Notify Core Audit
 
 ## 🔒 6. Security & Compliance Overview
 
-| Area | Control |
-|-------|----------|
-| **Encryption** | TLS 1.3 (in-transit), AES-256 (at rest) |
-| **RLS** | Per-org enforcement in each schema |
-| **Secrets** | Vault + GitHub Encrypted Secrets |
-| **Auditing** | Centralized in Core DB (`audit_logs`) |
-| **Key Rotation** | Every 90 days |
-| **User Data Removal** | GDPR-compliant deletion & anonymization |
+### Zero Trust Security Model
+
+The platform implements comprehensive zero trust architecture:
+- **Identity Verification**: JWT with RS256 4096-bit keys, 90-day rotation, jti-based replay prevention
+- **Least Privilege**: Role-based access with granular RLS policies at database level
+- **Network Segmentation**: API Gateway → Service Mesh → mTLS → Application → Private DB
+- **Continuous Monitoring**: All requests logged with trace_id for end-to-end visibility
+
+### Security Controls by Layer
+
+| Layer | Control | Implementation |
+|-------|---------|----------------|
+| **Application** | Authentication | JWT (24h expiry) + MFA (TOTP/SMS/Email) + Device fingerprinting |
+| **Application** | Authorization | RBAC + ABAC with policy enforcement per endpoint |
+| **Network** | Encryption in Transit | TLS 1.3 + mTLS for inter-service + Perfect Forward Secrecy |
+| **Database** | Encryption at Rest | AES-256-GCM + Customer-Managed Keys (CMK) |
+| **Database** | RLS | Enhanced role-based policies with CRUD-level permissions |
+| **Database** | Connection Security | PgBouncer with transaction pooling, 25 connections per service |
+| **Secrets** | Key Management | HashiCorp Vault + AWS KMS with 90-day rotation |
+| **Auditing** | Comprehensive Logging | Centralized `core.audit_logs` with 1-year retention (6 years for PHI) |
+| **Backup** | Data Protection | AES-256 encrypted backups with CMK, RTO < 1hr, RPO < 5min |
+| **Identity** | Password Security | Argon2id (64MB, 3 iterations) + per-user salt + server pepper |
+| **API** | Rate Limiting | Tiered: 10/100/1000 req/min with DDoS protection via WAF |
+| **Supply Chain** | Code Integrity | GPG-signed commits + SBOM + SLSA Level 3 provenance |
+
+### Compliance Framework
+
+| Standard | Requirement | Implementation | Verification |
+|----------|-------------|----------------|--------------|
+| **GDPR** | Right to Erasure | Soft delete → Hard delete (90d) + crypto-shredding | Automated reports |
+| **GDPR** | Data Portability | Export API (JSON/CSV) | User self-service |
+| **GDPR** | Consent Management | Granular consent tracking | Audit logs |
+| **SOC2** | Access Controls | MFA + RBAC + RLS | Quarterly audit |
+| **SOC2** | Audit Logs | All changes logged with retention | Continuous monitoring |
+| **SOC2** | Backup & Recovery | Encrypted backups + DR testing | Weekly restore tests |
+| **HIPAA** | PHI Protection | AES-256 + access logging + BAA | Annual assessment |
+| **HIPAA** | Access Logs | 6-year retention + tamper-proof | Compliance automation |
+| **HIPAA** | Minimum Necessary** | Role-based data masking | Policy enforcement |
+| **PCI DSS** | No Card Storage | Stripe/payment processor only | N/A - not storing cards |
+
+### Data Classification & Handling
+
+| Classification | Encryption | Access Control | Audit | Anonymization |
+|----------------|------------|----------------|-------|---------------|
+| **Public** | TLS 1.3 | None required | Optional | N/A |
+| **Internal** | TLS 1.3 + at rest | Authentication required | Standard | N/A |
+| **Confidential** | TLS 1.3 + AES-256 + CMK | MFA + RBAC + RLS | Enhanced | For analytics |
+| **PHI/PII** | TLS 1.3 + AES-256 + CMK + Field-level | MFA + RBAC + RLS + Minimum necessary | Full (6yr) | K-anonymity (k≥5) |
 
 All services maintain **zero-trust isolation** and adhere to SOC2 controls.
 
@@ -166,10 +206,54 @@ All services maintain **zero-trust isolation** and adhere to SOC2 controls.
 
 ---
 
-## ✅ 10. Summary
+## 📊 10. Performance & Reliability Targets
 
-This **Enterprise Architecture Master Blueprint** unifies all Vorklee2 components — from identity and apps to infrastructure and compliance — under a single, auditable, and scalable system.  
-It ensures long-term maintainability, data protection, and cross-service consistency.
+### Service Level Objectives (SLOs)
+
+| Service | Metric | Target | Error Budget |
+|---------|--------|--------|--------------|
+| **API Availability** | Uptime | 99.9% (43.2min/month) | 0.1% |
+| **API Latency P95** | Response time | < 250ms | 5% can exceed |
+| **API Latency P99** | Response time | < 500ms | 1% can exceed |
+| **Database P95** | Query latency | < 100ms | 5% can exceed |
+| **Auth Success Rate** | Login success | > 99.5% | 0.5% failures |
+| **Deployment Frequency** | Production deploys | Daily | N/A |
+| **MTTR** | Mean time to recovery | < 1 hour | N/A |
+| **Change Failure Rate** | Failed deployments | < 5% | N/A |
+
+### Disaster Recovery
+
+- **RTO (Recovery Time Objective)**: < 1 hour
+- **RPO (Recovery Point Objective)**: < 5 minutes
+- **Cross-Region Failover**: Automatic within 5 minutes
+- **Backup Verification**: Weekly restore tests
+- **DR Drills**: Quarterly full failover exercises
+
+### Scalability Targets
+
+- **Concurrent Users**: 100,000+
+- **API Requests**: 10,000 req/sec
+- **Database Connections**: 100 per project via PgBouncer
+- **Storage**: Unlimited (Neon serverless)
+- **Horizontal Scaling**: Auto-scale 1-8 vCPUs per workload
+
+---
+
+## ✅ 11. Summary
+
+This **Enterprise Architecture Master Blueprint** unifies all Vorklee2 components — from identity and apps to infrastructure and compliance — under a single, auditable, and scalable system.
+
+**Architecture Highlights:**
+- **Zero Trust Security**: Multi-layered defense with continuous verification
+- **Enterprise Authentication**: Argon2id + JWT + MFA + Device fingerprinting
+- **Database Excellence**: Enhanced RLS, PgBouncer pooling, < 100ms P95 latency
+- **Disaster Recovery**: RTO < 1hr, RPO < 5min, automated cross-region failover
+- **Compliance Ready**: GDPR, SOC2, HIPAA with automated controls
+- **High Availability**: 99.9% SLO with comprehensive monitoring
+- **Supply Chain Security**: GPG commits + SBOM + SLSA Level 3
+- **Observability**: Structured logging, OpenTelemetry tracing, comprehensive dashboards
+
+It ensures long-term maintainability, data protection, and cross-service consistency at enterprise scale.
 
 ---
 

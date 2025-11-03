@@ -163,22 +163,217 @@ jobs:
 
 ## 🧾 9. Code Ownership and Review Policy
 
-- Each app folder (`apps/*`) owned by a dedicated team.  
-- Shared packages reviewed by **Platform Engineering**.  
-- At least **two approvals required** for merge into `main`.  
-- AI-generated code must include `AI-METADATA` comment header.  
+### Ownership Model
+- Each app folder (`apps/*`) owned by a dedicated team per CODEOWNERS file
+- Shared packages (`packages/*`) reviewed by **Platform Engineering**
+- Infrastructure code (`scripts/`, `.github/`) owned by **DevOps team**
+- Documentation (`docs/`) reviewed by **Technical Writing + Engineering**
 
-Example:
+### Code Review Requirements
+- **Minimum Approvals**: 2 reviewers (1 code owner + 1 peer)
+- **Security Changes**: Additional review by Security team
+- **Database Migrations**: Review by DBA + automated schema validation
+- **AI-Generated Code**: Must include `AI-METADATA` header + human review
+
+**CODEOWNERS File Example:**
+```
+# Apps
+/apps/core/*        @vorklee/core-team
+/apps/notes/*       @vorklee/notes-team
+/apps/attendance/*  @vorklee/attendance-team
+
+# Packages
+/packages/ui/*          @vorklee/platform-engineering
+/packages/auth-client/* @vorklee/security-team
+/packages/db/*          @vorklee/platform-engineering
+
+# Infrastructure
+/.github/*       @vorklee/devops
+/scripts/*       @vorklee/devops
+/terraform/*     @vorklee/devops
+
+# Documentation
+/docs/*          @vorklee/tech-writers @vorklee/engineering
+```
+
+### AI-Generated Code Standards
 ```ts
-// AI-METADATA: { "generator": "GPT-5", "context": "API route generation" }
+// AI-METADATA: {
+//   "generator": "GPT-5",
+//   "version": "2025-01",
+//   "context": "API route generation",
+//   "reviewed_by": "john@vorklee.com",
+//   "review_date": "2025-01-15"
+// }
+```
+
+### Commit Signing Policy
+- **Required**: GPG-signed commits for all production branches
+- **Key Management**: Store public keys in GitHub
+- **Verification**: CI/CD rejects unsigned commits
+- **Key Size**: Minimum 4096-bit RSA or Ed25519
+
+**Setup GPG Signing:**
+```bash
+# Generate key
+gpg --full-generate-key
+# Configure Git
+git config --global user.signingkey YOUR_GPG_KEY_ID
+git config --global commit.gpgsign true
+# Verify
+git log --show-signature
 ```
 
 ---
 
-## ✅ Summary
+## 🔒 10. Supply Chain Security
 
-The Turborepo and repository structure provide a scalable, modular foundation for the entire Vorklee2 ecosystem.  
-By standardizing naming, CI/CD, and coding practices, it enables consistent developer experience and safe automation across all services.
+### Dependency Management
+
+| Tool | Purpose | Configuration |
+|------|---------|---------------|
+| **npm audit** | Vulnerability scanning | Run on every PR, fail on moderate+ |
+| **Snyk** | Continuous monitoring | Daily scans, auto-PR for fixes |
+| **Dependabot** | Automated updates | Weekly security patches |
+| **npm-check-updates** | Version management | Monthly major version reviews |
+
+### Security Scanning Pipeline
+
+```yaml
+# .github/workflows/security-scan.yml
+name: Security Scan
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Dependency vulnerabilities
+      - name: npm audit
+        run: npm audit --audit-level=moderate
+
+      # 2. Snyk vulnerability scan
+      - uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      # 3. Container image scanning
+      - name: Trivy container scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+
+      # 4. Secret scanning
+      - name: TruffleHog secret scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+
+      # 5. License compliance
+      - name: License checker
+        run: npx license-checker --production --failOn "GPL;AGPL"
+```
+
+### SBOM (Software Bill of Materials)
+
+**Generation:**
+```bash
+# Generate SBOM for each app
+npm run sbom:generate
+# Output: sbom-{app}-{version}.json
+
+# SBOM format: SPDX 2.3 or CycloneDX 1.4
+```
+
+**SBOM Contents:**
+- All direct and transitive dependencies
+- License information
+- Known vulnerabilities (CVE references)
+- Package hashes for verification
+- Build-time metadata
+
+**Storage & Distribution:**
+- Stored in artifact registry with release
+- Signed with GPG for authenticity
+- Published to transparency log
+
+### Provenance Attestation
+
+Using **SLSA (Supply-chain Levels for Software Artifacts)** framework:
+
+```yaml
+# Generate provenance
+- name: Generate provenance
+  uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
+  with:
+    base64-subjects: ${{ needs.build.outputs.hashes }}
+```
+
+**Provenance includes:**
+- Source repository and commit SHA
+- Build platform and environment
+- Builder identity and timestamp
+- Materials (dependencies) used
+- Build parameters and commands
+
+### Dependency Pinning Strategy
+
+```json
+// package.json
+{
+  "dependencies": {
+    "next": "14.0.4",              // Exact version (not ^14.0.4)
+    "@radix-ui/react-dialog": "1.0.5"
+  },
+  "devDependencies": {
+    "typescript": "5.3.3",         // Pinned versions
+    "eslint": "8.56.0"
+  }
+}
+```
+
+**Update Policy:**
+- **Security patches**: Within 48 hours of disclosure
+- **Minor updates**: Monthly review and testing
+- **Major updates**: Quarterly evaluation with migration plan
+
+### Private Package Registry
+
+- **NPM Enterprise**: Private packages at `@vorklee/*`
+- **Access Control**: Token-based with 90-day rotation
+- **Malware Scanning**: All packages scanned before publish
+- **Provenance**: Required for all internal packages
+
+### Vulnerability Response
+
+| Severity | Response Time | Action |
+|----------|---------------|--------|
+| **Critical** | < 4 hours | Immediate hotfix + emergency deploy |
+| **High** | < 24 hours | Prioritized patch + deploy next day |
+| **Moderate** | < 7 days | Include in next sprint |
+| **Low** | < 30 days | Address in maintenance window |
+
+---
+
+## ✅ 11. Summary
+
+The Turborepo and repository structure provide a scalable, modular foundation for the entire Vorklee2 ecosystem.
+
+**Supply Chain Security Highlights:**
+- **Signed Commits**: GPG-required for all production code
+- **Automated Scanning**: Snyk + Trivy + TruffleHog on every commit
+- **SBOM Generation**: Full dependency transparency per release
+- **Provenance Attestation**: SLSA Level 3 build verification
+- **Dependency Pinning**: Exact versions with controlled update process
+- **Vulnerability Response**: 4-hour SLA for critical issues
+
+By standardizing naming, CI/CD, supply chain security, and coding practices, it enables consistent developer experience and safe automation across all services.
 
 ---
 

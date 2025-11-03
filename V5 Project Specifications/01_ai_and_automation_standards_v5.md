@@ -94,11 +94,48 @@ All pipelines run via **GitHub Actions → Neon → Vercel Deploys** and log bac
 
 ## 🔒 6. AI Safety & Security
 
-- AI tools operate under **isolated API keys** with per-repo scope.  
-- No production credentials exposed to AI agents.  
-- Sensitive data redacted before prompt submission.  
-- AI actions logged to `core.audit_logs` with `{ actor: "AI", module, timestamp }`.  
-- Regular review by **AI Compliance Lead** every quarter.
+### Access Control
+- AI tools operate under **isolated API keys** with per-repo scope and least-privilege access.
+- Separate API keys per environment (dev, staging, prod) with different permission levels.
+- Production credentials NEVER exposed to AI agents under any circumstances.
+- AI service accounts with dedicated IAM roles and 90-day key rotation.
+
+### Data Protection
+- **PII Redaction**: All personally identifiable information automatically redacted before prompt submission.
+- **PII Detection**: Use regex patterns + NLP models to identify email, phone, SSN, credit cards.
+- **Data Classification**: Only "Public" and "Internal" classified data allowed in AI prompts.
+- **Confidential/PHI Data**: Requires explicit approval and air-gapped processing environment.
+
+### Prompt Security
+- Input sanitization to prevent prompt injection attacks.
+- Maximum prompt size: 100KB to prevent resource exhaustion.
+- Rate limiting: 100 AI requests per minute per service.
+- Content filtering for sensitive outputs (credentials, keys, tokens).
+
+### Model Security
+- Model endpoints authenticated via mTLS certificates.
+- Model responses validated against expected schema.
+- Timeout enforcement: 30 seconds per AI request.
+- Circuit breaker: Disable AI service after 5 consecutive failures.
+
+### Audit & Compliance
+- AI actions logged to `core.audit_logs` with full context:
+  ```json
+  {
+    "actor": "AI",
+    "ai_model": "GPT-5",
+    "module": "notes",
+    "action": "code_generation",
+    "input_hash": "sha256:...",
+    "output_hash": "sha256:...",
+    "tokens_used": 1500,
+    "timestamp": "ISO8601",
+    "trace_id": "uuid"
+  }
+  ```
+- AI decision trail maintained for 1 year for audit purposes.
+- Regular security review by **AI Compliance Lead** every quarter.
+- Quarterly AI ethics review for bias and fairness assessment.
 
 ---
 
@@ -145,10 +182,27 @@ All AI-authored sections are marked:
 
 ---
 
-## ✅ Summary
+## 🚨 10. AI Incident Response
 
-- Centralized AI policy ensures security, quality, and compliance.  
-- Every AI output is traceable, reviewable, and version-locked.  
+| Incident Type | Response Action | SLA |
+|----------------|-----------------|-----|
+| **PII Exposure** | Immediate halt + data purge + incident report | < 1 hour |
+| **Model Failure** | Fallback to manual process + alert engineering | < 5 minutes |
+| **Hallucination** | Flag output + human review + model retraining | < 24 hours |
+| **Security Breach** | Revoke AI keys + audit logs + security review | < 30 minutes |
+| **Bias Detection** | Suspend feature + ethics review + remediation | < 48 hours |
+
+All AI incidents logged to `core.security_incidents` and reviewed in weekly ops meetings.
+
+---
+
+## ✅ 11. Summary
+
+- Centralized AI policy ensures security, quality, and compliance.
+- Every AI output is traceable, reviewable, and version-locked.
+- PII protection and data classification enforced at prompt level.
+- AI access controls follow least-privilege with regular key rotation.
+- Comprehensive audit trail for all AI operations.
 - Aligns with **SOC2, GDPR, and HIPAA** audit expectations.
 
 ---

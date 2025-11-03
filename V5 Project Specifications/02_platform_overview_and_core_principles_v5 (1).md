@@ -53,9 +53,11 @@ Each environment mirrors the same DB schema and configuration via Drizzle migrat
 | **Frontend** | Next.js 14 (App Router) | UI rendering and client routing |
 | **Backend** | Edge Functions / Node APIs | Business logic and integrations |
 | **Database** | Neon Postgres (serverless) | Persistent storage |
-| **Cache** | Redis Cloud | Session, list, and hot-data caching |
+| **Cache** | Redis Cloud (TLS + ACL) | Session, list, and hot-data caching |
 | **Queue** | BullMQ (Redis-based) | Background and async tasks |
-| **Storage** | S3 + Cloudflare R2 | File and attachment storage |
+| **Storage** | S3 + Cloudflare R2 (encrypted) | File and attachment storage |
+| **API Gateway** | Cloudflare Workers + WAF | Request routing and security filtering |
+| **Service Mesh** | Future: Istio/Linkerd | Service-to-service mTLS and observability |
 | **Monitoring** | Sentry, Grafana, PostHog | Logs, metrics, analytics |
 | **AI Layer** | @core-ai (LangChain + GPT-5) | Summarization and automation |
 
@@ -87,16 +89,58 @@ neonctl branches create --project vorklee-notes-prod staging
 
 ## 🔒 5. Security Model
 
-| Area | Mechanism |
-|-------|-----------|
-| Authentication | Centralized JWT (Core Identity) |
-| Authorization | Role & app-based access tokens |
-| Data Isolation | org_id scoping + RLS |
-| Network | TLS 1.3 everywhere |
-| Secrets | Managed by Vault / Vercel Secrets |
-| Backups | PITR + automated S3 snapshots |
+### Zero Trust Architecture
+The platform implements **zero trust security** principles:
+- **Never Trust, Always Verify**: Every request authenticated and authorized regardless of origin.
+- **Least Privilege Access**: Services granted minimum required permissions only.
+- **Assume Breach**: Network segmentation limits blast radius of potential compromises.
+- **Continuous Verification**: Tokens validated on every request with short TTLs.
 
-All environments maintain identical security posture.
+### Security Layers
+
+| Area | Mechanism | Details |
+|-------|-----------|---------|
+| **Authentication** | Centralized JWT (Core Identity) | RS256 signed, 24h expiry, key rotation every 90 days |
+| **Authorization** | Role & app-based access tokens | RBAC + ABAC with policy enforcement |
+| **Data Isolation** | org_id scoping + RLS | Postgres Row-Level Security enforced |
+| **Network Security** | TLS 1.3 everywhere + mTLS for inter-service | Certificate pinning, HSTS enabled |
+| **Secrets Management** | HashiCorp Vault + Vercel Secrets | Encrypted at rest, 90-day rotation |
+| **Backups** | PITR + automated S3 snapshots | Encrypted with customer-managed keys |
+| **API Gateway** | WAF with DDoS protection | Rate limiting, IP filtering, geo-blocking |
+| **Service-to-Service** | HMAC request signing + mTLS | SHA-256 signatures with timestamp validation |
+
+### Network Security
+
+```
+Internet → Cloudflare WAF → API Gateway → Service Mesh → Application Pods
+   ↓           ↓                 ↓              ↓               ↓
+  TLS 1.3   DDoS Protection   Rate Limit    mTLS         Pod Network Policy
+```
+
+**Network Policies:**
+- **Ingress**: Only from API Gateway (IP whitelisting)
+- **Egress**: Whitelist destinations only (DB, Redis, external APIs)
+- **Service-to-Service**: mTLS required, no plaintext communication
+- **Database**: Private endpoints only, no public internet access
+
+### Redis Security Configuration
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| **TLS** | Required (TLS 1.3) | Encrypt data in transit |
+| **Authentication** | ACL with per-service users | Least privilege access |
+| **Password** | 32-char random + 90-day rotation | Strong authentication |
+| **Commands** | Restricted (no FLUSHDB, FLUSHALL, KEYS) | Prevent accidental data loss |
+| **Encryption at Rest** | AES-256 | Protect persisted data |
+| **Network** | Private VPC only | No public internet access |
+| **Maxmemory Policy** | allkeys-lru | Prevent memory exhaustion |
+
+**Redis Instance Separation:**
+- `redis-session`: User sessions and JWT refresh tokens
+- `redis-cache`: Application data caching
+- `redis-queue`: BullMQ job queues
+
+All environments maintain identical security posture with environment-specific secrets.
 
 ---
 
@@ -138,9 +182,33 @@ Analytics aggregated via `vorklee-analytics-prod`.
 
 ---
 
-## ✅ 9. Summary
+## 🔐 9. Data Classification System
 
-The **Platform Overview** defines how all components — Core, Apps, and CI/CD — interoperate under a unified, secure, and observable architecture.  
+All data in the platform is classified to determine appropriate security controls:
+
+| Level | Description | Examples | Access Control |
+|-------|-------------|----------|----------------|
+| **Public** | Safe for public disclosure | Marketing content, public docs | No restrictions |
+| **Internal** | Business operations data | Internal docs, metrics | Authenticated users only |
+| **Confidential** | Sensitive business data | User data, business plans | Need-to-know basis + encryption |
+| **PHI/PII** | Regulated personal data | Healthcare records, SSN | Strict access logs + encryption + compliance |
+
+**Handling Requirements by Classification:**
+- **Public**: Standard TLS encryption
+- **Internal**: TLS + authentication + audit logging
+- **Confidential**: TLS + encryption at rest + RLS + audit logging + MFA
+- **PHI/PII**: All of above + data masking + anonymization for analytics + HIPAA BAA
+
+---
+
+## ✅ 10. Summary
+
+The **Platform Overview** defines how all components — Core, Apps, and CI/CD — interoperate under a unified, secure, and observable architecture.
+- **Zero trust security** with continuous verification and least privilege access
+- **Multi-layered defense** from API gateway to service mesh to database RLS
+- **Comprehensive data classification** system guiding security controls
+- **Redis security** with TLS, ACL, and instance separation
+- **Network segmentation** limiting blast radius of potential breaches
 This serves as the foundation for all other documents within `/docs/specs_v5/`.
 
 ---

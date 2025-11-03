@@ -122,35 +122,95 @@ All AI processes respect GDPR and anonymize data before model input.
 
 ## 🧾 8. Compliance and Data Policy
 
-| Regulation | Compliance Status |
-|-------------|--------------------|
-| **GDPR** | Fully compliant (user consent, erasure supported) |
-| **SOC2** | Core audit logs + encrypted storage |
-| **HIPAA** | PHI encryption + restricted access |
-| **Data Residency** | Multi-region Neon deployments |
-| **Access Logs** | Stored in `core.audit_logs` for 1 year |
+| Regulation | Requirement | Implementation | Verification |
+|------------|-------------|----------------|--------------|
+| **GDPR** | Right to Erasure | Soft delete → Hard delete (90d) + crypto-shredding | Automated compliance reports |
+| **GDPR** | Data Portability | Export API (JSON/CSV/PDF) with all user notes | User self-service portal |
+| **GDPR** | Consent Management | Granular consent for AI features, analytics, marketing | Audit trail in Core |
+| **GDPR** | Data Minimization | Only collect necessary fields, no excessive tracking | Privacy by design |
+| **SOC2** | Access Controls | MFA for admin, RBAC, RLS at DB level | Quarterly SOC2 audit |
+| **SOC2** | Audit Logs | All note operations logged with 1-year retention | Continuous monitoring |
+| **SOC2** | Backup & Recovery | Encrypted backups, weekly restore tests | Automated verification |
+| **HIPAA** | PHI Protection | AES-256 encryption + access logging + BAA with Neon | Annual HIPAA assessment |
+| **HIPAA** | Minimum Necessary** | Role-based data masking for healthcare notes | Policy enforcement |
+| **HIPAA** | Access Logs | 6-year retention for PHI-containing notes | Compliance automation |
+| **Data Residency** | Regional Storage | US, EU, APAC Neon projects, no cross-border transfer | Geolocation enforcement |
+| **Accessibility** | WCAG 2.1 Level AA | Keyboard nav, screen reader support, color contrast | Automated testing |
 
 **Data Lifecycle:**
-- Notes soft-deleted with `deleted_at`.  
-- Periodic cleanup every 90 days.  
-- AI logs anonymized and retained for 7 days only.
+- **Active Notes**: Full access, regular backups
+- **Soft Deleted**: 90-day retention with restricted access (user can restore)
+- **Hard Deleted**: Crypto-shredding (key destruction), permanent removal
+- **AI Training**: Opt-in only, fully anonymized, k-anonymity (k≥5)
+- **AI Logs**: Anonymized, 7-day retention, no PII
+
+**Data Classification:**
+- **Public Notes**: Shared notes with public links (encryption in transit only)
+- **Internal Notes**: Default workspace notes (TLS + at-rest encryption)
+- **Confidential Notes**: Encrypted notes with stricter access controls
+- **Healthcare Notes**: HIPAA-compliant notes with 6-year audit logs
 
 ---
 
-## 📈 9. Future Product Expansion
+## 📱 9. Mobile & Cross-Platform Strategy
 
-| Category | Description | Example |
-|-----------|--------------|----------|
-| **Integrations** | Slack / Notion / Google Workspace plugins | Share or sync notes |
-| **Automation** | AI workflow agents | Meeting summary → Task generation |
-| **Marketplace** | Developer extensions | Custom templates, widgets |
-| **Mobile App** | iOS / Android clients | Sync with Core API |
+### Mobile Applications
+
+| Platform | Technology | Features | Release |
+|----------|------------|----------|---------|
+| **iOS** | React Native / Swift | Full feature parity with web | Q2 2026 |
+| **Android** | React Native / Kotlin | Full feature parity with web | Q2 2026 |
+| **Progressive Web App** | Next.js PWA | Offline support, push notifications | Q1 2026 |
+
+### Mobile-Specific Features
+- **Offline Mode**: Local SQLite cache with background sync
+- **Push Notifications**: Real-time note updates, mentions, shares
+- **Biometric Auth**: FaceID, TouchID, fingerprint
+- **Camera Integration**: Scan documents, add photos to notes
+- **Voice Input**: WhisperX transcription for voice notes
+- **Widgets**: iOS/Android home screen widgets for quick access
+
+### Cross-Platform Sync
+- **Real-Time Sync**: WebSocket connections for instant updates
+- **Conflict Resolution**: Operational Transform (OT) for concurrent edits
+- **Offline Queue**: Queue operations when offline, sync when reconnected
+- **Version History**: Track changes across devices
+
+### API Design for Mobile
+- **GraphQL**: Efficient data fetching, reduce over-fetching
+- **Pagination**: Cursor-based for infinite scroll
+- **Caching**: Apollo Client cache with TTL
+- **Compression**: Gzip/Brotli for reduced bandwidth
+- **CDN**: Static assets served from edge locations
 
 ---
 
-## ✅ 10. Summary
+## 📈 10. Future Product Expansion
 
-The **Vorklee Notes App** delivers an enterprise-ready, AI-enhanced knowledge management solution built for security, collaboration, and scalability.  
+| Category | Description | Example | Timeline |
+|-----------|--------------|----------|----------|
+| **Integrations** | Slack / Notion / Google Workspace plugins | Share or sync notes | Q3 2026 |
+| **Automation** | AI workflow agents | Meeting summary → Task generation | Q2 2026 |
+| **Marketplace** | Developer extensions | Custom templates, widgets | Q4 2026 |
+| **Collaboration** | Real-time co-editing | Google Docs-style editing | Q3 2026 |
+| **Desktop Apps** | Electron-based desktop clients | Windows, macOS, Linux | Q4 2026 |
+| **Browser Extension** | Chrome/Firefox extensions | Quick capture, web clipper | Q2 2026 |
+
+---
+
+## ✅ 11. Summary
+
+The **Vorklee Notes App** delivers an enterprise-ready, AI-enhanced knowledge management solution built for security, collaboration, and scalability.
+
+**Product Highlights:**
+- **Multi-Platform**: Web, iOS, Android, PWA with offline support and real-time sync
+- **Enterprise Compliance**: GDPR, SOC2, HIPAA with automated controls and 6-year audit logs
+- **AI-Powered**: Smart tagging, summarization, contextual search with privacy-first design
+- **Scalable Pricing**: Free tier → Pro ($10/user) → Enterprise (custom) with clear upgrade paths
+- **High Availability**: 99.9% uptime SLO with < 250ms API latency
+- **Security First**: Enhanced RLS, JWT + MFA, file scanning, crypto-shredding
+- **Developer Friendly**: OpenAPI specs, GraphQL, SDKs, marketplace for extensions
+
 Its modular structure under the multi-project Neon architecture ensures long-term growth, compliance and seamless integration with the rest of the Vorklee2 ecosystem.
 
 ---

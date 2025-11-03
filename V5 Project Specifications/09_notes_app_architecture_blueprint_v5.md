@@ -173,12 +173,38 @@ Events sent via Kafka or HTTP Webhook → Core and Analytics.
 
 ## 🔒 8. Security
 
-- JWT authentication for all endpoints.  
-- HMAC validation for internal service calls.  
-- File uploads scanned via VirusTotal API.  
-- Rate limiting: 100 req/min per user.  
-- Logs redacted for PII before export.  
-- RLS and audit logging enabled on all tables.
+### Authentication & Authorization
+- **JWT Validation**: RS256 verification with Core's public key (kid-based key rotation support)
+- **Rate Limiting**: Tiered - Auth: 100/min, Pro: 500/min, Enterprise: 1000/min
+- **HMAC Signing**: SHA-256 signatures for internal service calls with 5-min timestamp validation
+- **MFA**: Required for admin operations (delete, bulk actions)
+
+### API Security
+- **Idempotency**: Support for Idempotency-Key header on POST/PUT operations
+- **Request Signing**: Sensitive operations (bulk delete) require HMAC signature
+- **Circuit Breaker**: 5 failures in 30s → open circuit → fast fail
+- **CORS**: Whitelist specific domains, no wildcard in production
+- **Input Validation**: Zod schemas for all request payloads
+
+### Database Security
+- **Enhanced RLS**: Role-based policies (admin, editor, viewer) with CRUD-level permissions
+- **Connection Pooling**: PgBouncer with 25 connections, transaction mode
+- **Encryption**: AES-256 at rest with CMK, TLS 1.3 in transit
+- **Backup**: Encrypted with CMK, RTO < 1hr, RPO < 5min
+
+### File Upload Security
+- **Scanning**: VirusTotal API scan before accepting upload
+- **File Type Validation**: Whitelist allowed MIME types
+- **Size Limits**: 10MB per file, 100MB total per note
+- **Storage**: S3/R2 with presigned URLs (1-hour expiry)
+- **Malware**: Quarantine suspicious files, alert security team
+
+### Data Protection
+- **PII Handling**: Redact email, phone, IP (keep first octet only) in logs
+- **Audit Logging**: All operations logged with user_id, org_id, trace_id
+- **Soft Delete**: 90-day retention before crypto-shredding
+- **RLS**: Enforced at database level via `app.current_org_id` and `app.current_user_id`
+- **Field Encryption**: Sensitive note content can be encrypted at field level (opt-in)
 
 Example audit log (Core):
 ```json
@@ -206,9 +232,47 @@ SELECT org_id, COUNT(*) AS note_count FROM notes GROUP BY org_id;
 
 ---
 
-## ✅ 10. Summary
+## 📊 10. Performance & Monitoring
 
-The **Notes App** is a fully modular, secure, and API-driven service within the Vorklee2 platform.  
+### Performance Targets
+
+| Metric | Target | Monitoring |
+|--------|--------|------------|
+| **API Latency P95** | < 250ms | Grafana + Sentry |
+| **API Latency P99** | < 500ms | Alert if exceeded |
+| **DB Query P95** | < 100ms | Neon Insights |
+| **Cache Hit Rate** | > 80% | Redis metrics |
+| **Error Rate** | < 0.1% | Real-time alerts |
+| **Availability** | 99.9% | Uptime monitoring |
+
+### Observability
+
+- **Structured Logging**: JSON format with trace_id, span_id, user_id, org_id
+- **Distributed Tracing**: OpenTelemetry integration for end-to-end request tracing
+- **Metrics**: Prometheus metrics exported, visualized in Grafana
+- **Alerting**: PagerDuty for P0/P1 incidents, Slack for P2/P3
+
+### Caching Strategy
+
+- **Redis Cache**: User note lists cached for 5 minutes
+- **Cache Invalidation**: On note create/update/delete
+- **Cache Keys**: `notes:list:{user_id}:{page}:{filters_hash}`
+- **Circuit Breaker**: If Redis down, bypass cache (degrade gracefully)
+
+---
+
+## ✅ 11. Summary
+
+The **Notes App** is a fully modular, secure, and API-driven service within the Vorklee2 platform.
+
+**Key Features:**
+- **Enterprise Security**: Enhanced RLS, JWT validation, rate limiting, file scanning
+- **High Performance**: < 250ms P95 latency, Redis caching, PgBouncer pooling
+- **Comprehensive Audit**: All operations logged with full context for compliance
+- **Disaster Recovery**: RTO < 1hr, RPO < 5min with encrypted backups
+- **Scalability**: Auto-scaling compute, connection pooling, event-driven architecture
+- **Integration**: Seamless with Core Identity, Analytics, and future modules
+
 It adheres to the multi-project Neon model, integrating tightly with Core Identity and Analytics for end-to-end scalability and compliance.
 
 ---
