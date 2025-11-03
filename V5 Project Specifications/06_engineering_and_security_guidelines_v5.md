@@ -53,7 +53,153 @@ Example lint config (`.eslintrc.json`):
 
 ---
 
-## 🔄 3. CI/CD Pipeline
+## 🧪 3. Testing Strategy
+
+### Test Pyramid
+
+| Level | Type | Coverage Target | Tools | Execution |
+|-------|------|-----------------|-------|-----------|
+| **Unit** | Component/function tests | 80%+ | Jest, Vitest | Every commit |
+| **Integration** | API + DB tests | 70%+ | Jest + Supertest | Every PR |
+| **E2E** | Full user flows | Critical paths | Playwright, Cypress | Pre-deploy |
+| **Performance** | Load + stress tests | SLO validation | k6, Artillery | Weekly + pre-release |
+| **Security** | SAST + DAST | 100% coverage | Snyk, OWASP ZAP | Every commit |
+
+### Unit Testing Standards
+
+```typescript
+// Example: notes.service.test.ts
+import { describe, it, expect, beforeEach } from 'vitest';
+import { NotesService } from './notes.service';
+
+describe('NotesService', () => {
+  let service: NotesService;
+
+  beforeEach(() => {
+    service = new NotesService();
+  });
+
+  describe('createNote', () => {
+    it('should create note with valid data', async () => {
+      const input = { title: 'Test', content: 'Content', userId: 'uuid' };
+      const result = await service.createNote(input);
+
+      expect(result).toHaveProperty('id');
+      expect(result.title).toBe('Test');
+    });
+
+    it('should throw error with invalid data', async () => {
+      await expect(service.createNote({})).rejects.toThrow('Validation error');
+    });
+  });
+});
+```
+
+### Integration Testing
+
+```typescript
+// Example: notes.api.test.ts
+import request from 'supertest';
+import { app } from '../app';
+
+describe('POST /api/v1/notes', () => {
+  it('should create note with valid JWT', async () => {
+    const response = await request(app)
+      .post('/api/v1/notes')
+      .set('Authorization', `Bearer ${validJWT}`)
+      .send({ title: 'Test', content: 'Content' });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data).toHaveProperty('id');
+  });
+
+  it('should return 401 without JWT', async () => {
+    const response = await request(app)
+      .post('/api/v1/notes')
+      .send({ title: 'Test' });
+
+    expect(response.status).toBe(401);
+  });
+});
+```
+
+### E2E Testing
+
+```typescript
+// Example: notes.e2e.spec.ts (Playwright)
+import { test, expect } from '@playwright/test';
+
+test.describe('Notes App', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('[name="email"]', 'test@example.com');
+    await page.fill('[name="password"]', 'password');
+    await page.click('button[type="submit"]');
+  });
+
+  test('should create new note', async ({ page }) => {
+    await page.click('text=New Note');
+    await page.fill('[name="title"]', 'E2E Test Note');
+    await page.fill('[name="content"]', 'This is a test');
+    await page.click('text=Save');
+
+    await expect(page.locator('text=E2E Test Note')).toBeVisible();
+  });
+});
+```
+
+### Performance Testing
+
+```javascript
+// Example: load-test.js (k6)
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export const options = {
+  stages: [
+    { duration: '2m', target: 100 },  // Ramp up
+    { duration: '5m', target: 100 },  // Stay at 100 users
+    { duration: '2m', target: 200 },  // Ramp to 200
+    { duration: '5m', target: 200 },  // Stay at 200
+    { duration: '2m', target: 0 },    // Ramp down
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)<250'], // 95% < 250ms
+    http_req_failed: ['rate<0.01'],   // <1% errors
+  },
+};
+
+export default function() {
+  const response = http.get('https://api.vorklee.com/v1/notes', {
+    headers: { 'Authorization': `Bearer ${__ENV.JWT_TOKEN}` },
+  });
+
+  check(response, {
+    'status is 200': (r) => r.status === 200,
+    'response time < 250ms': (r) => r.timings.duration < 250,
+  });
+
+  sleep(1);
+}
+```
+
+### Test Data Management
+
+- **Test Databases**: Separate Neon branch per PR (ephemeral)
+- **Fixtures**: Seed data for consistent tests
+- **Mocking**: External services mocked in unit/integration tests
+- **Cleanup**: Automatic teardown after each test run
+
+### Continuous Testing
+
+- **Pre-commit**: Unit tests + linting (via Husky)
+- **PR**: Full test suite + coverage report
+- **Nightly**: E2E + performance + security scans
+- **Pre-release**: Full regression + load testing
+
+---
+
+## 🔄 4. CI/CD Pipeline
 
 | Stage | Action | Tool |
 |--------|---------|------|
@@ -211,7 +357,121 @@ jobs:
 
 ---
 
-## 🔒 4. Security Guidelines
+## 🚀 5. Deployment Strategies
+
+### Blue-Green Deployment
+
+```
+┌──────────┐     ┌──────────┐
+│  Blue    │────▶│  Green   │
+│ (v5.2.0) │     │ (v5.2.1) │
+│ Active   │     │ Staging  │
+└──────────┘     └──────────┘
+      │                │
+      │    Switch      │
+      └───────────────▶│
+           Traffic     │
+                  (v5.2.1 Active)
+```
+
+**Process:**
+1. Deploy new version to Green environment
+2. Run smoke tests on Green
+3. Switch 10% traffic to Green (canary)
+4. Monitor metrics for 15 minutes
+5. If healthy → switch 100% traffic to Green
+6. Keep Blue as rollback target for 24 hours
+
+### Canary Deployments
+
+| Stage | Traffic % | Duration | Rollback Threshold |
+|-------|-----------|----------|-------------------|
+| **Canary** | 5% | 10 minutes | Error rate > 0.5% |
+| **Small** | 25% | 30 minutes | Error rate > 0.2% |
+| **Medium** | 50% | 1 hour | Error rate > 0.1% |
+| **Full** | 100% | N/A | Standard monitoring |
+
+**Automated Rollback Triggers:**
+- Error rate exceeds threshold
+- P95 latency > 500ms
+- Any P0 incident detected
+- Health check failures > 3
+
+### Feature Flags
+
+**Platform:** LaunchDarkly / Unleash / split.io
+
+```typescript
+// Example: Feature flag usage
+import { useFeatureFlag } from '@vorklee/feature-flags';
+
+export function NotesApp() {
+  const aiSummaryEnabled = useFeatureFlag('ai-summary-v2', {
+    userId: user.id,
+    orgId: user.orgId,
+    plan: user.plan
+  });
+
+  return (
+    <div>
+      {aiSummaryEnabled && <AISummaryButton />}
+    </div>
+  );
+}
+```
+
+**Feature Flag Categories:**
+
+| Type | Purpose | Example | Lifetime |
+|------|---------|---------|----------|
+| **Release** | Gradual rollout | New UI component | 2-4 weeks |
+| **Experiment** | A/B testing | Pricing page variant | 2-8 weeks |
+| **Ops** | Kill switch | AI service | Permanent |
+| **Permission** | Plan-based features | Enterprise analytics | Permanent |
+
+**Flag Lifecycle:**
+1. **Development**: Flag created, default OFF
+2. **Testing**: Enabled for dev/staging environments
+3. **Canary**: Enabled for 5% production users
+4. **Rollout**: Gradual increase to 100%
+5. **Cleanup**: Remove flag after 2 weeks at 100%
+
+### Zero-Downtime Migrations
+
+**Database Migrations:**
+```sql
+-- Step 1: Add new column (nullable)
+ALTER TABLE notes ADD COLUMN new_field TEXT NULL;
+
+-- Step 2: Deploy code that writes to both old and new fields
+
+-- Step 3: Backfill data
+UPDATE notes SET new_field = old_field WHERE new_field IS NULL;
+
+-- Step 4: Deploy code that only uses new field
+
+-- Step 5: Drop old column
+ALTER TABLE notes DROP COLUMN old_field;
+```
+
+**Deployment Order:**
+1. Database schema changes (additive only)
+2. Deploy new application code
+3. Run data migrations (background jobs)
+4. Remove deprecated code (next release)
+
+### Rollback Procedures
+
+| Scenario | Method | Time | Validation |
+|----------|--------|------|------------|
+| **Application Bug** | Blue-green switch | < 30 seconds | Health checks |
+| **Database Migration** | Restore from PITR | < 5 minutes | Data integrity check |
+| **Config Error** | Revert commit + redeploy | < 2 minutes | Smoke tests |
+| **Feature Flag Issue** | Toggle flag OFF | < 10 seconds | User reports |
+
+---
+
+## 🔐 6. Security Guidelines
 
 ### Authentication
 - All user and service authentication handled by Core Identity.
@@ -487,7 +747,264 @@ Dashboards include:
 
 ---
 
-## ✅ 13. Summary
+## 🔐 13. Certificate & Secret Management
+
+### TLS Certificate Management
+
+| Component | Provider | Renewal | Validation |
+|-----------|----------|---------|------------|
+| **Primary Domain** | Let's Encrypt | Auto (60-day before expiry) | ACME DNS-01 |
+| **Wildcard Certs** | Let's Encrypt | Auto via cert-manager | DNS validation |
+| **Internal Services** | Private CA | Manual (1-year) | mTLS validation |
+| **CDN** | Cloudflare | Automatic | Origin CA |
+
+**Certificate Monitoring:**
+```bash
+# Automated certificate expiry check (daily)
+openssl s_client -connect api.vorklee.com:443 -servername api.vorklee.com \
+  | openssl x509 -noout -dates
+
+# Alert if < 30 days remaining
+```
+
+**cert-manager Configuration (Kubernetes):**
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: devops@vorklee.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - dns01:
+        cloudflare:
+          apiTokenSecretRef:
+            name: cloudflare-api-token
+            key: api-token
+```
+
+### Secret Rotation Automation
+
+**Automated Rotation Schedule:**
+```yaml
+# secrets-rotation.yml
+rotation_policies:
+  jwt_keys:
+    schedule: "every 90 days"
+    overlap: "7 days"
+    notification: "7 days before"
+
+  database_passwords:
+    schedule: "every 90 days"
+    downtime: "zero"  # Rolling update
+
+  api_keys:
+    schedule: "every 90 days"
+    services: ["stripe", "sendgrid", "twilio"]
+
+  redis_passwords:
+    schedule: "every 90 days"
+    method: "dual-password"  # Support both old/new
+```
+
+**Rotation Process:**
+1. Generate new secret in Vault
+2. Deploy applications with dual-secret support
+3. Verify new secret works
+4. Remove old secret after 7-day grace period
+5. Update audit logs
+
+---
+
+## 📚 14. Operational Runbooks
+
+### Standard Operating Procedures
+
+| Scenario | Runbook | MTTR Target |
+|----------|---------|-------------|
+| **Database Connection Pool Exhausted** | `runbooks/db-pool-exhausted.md` | < 15 minutes |
+| **High API Latency** | `runbooks/high-api-latency.md` | < 30 minutes |
+| **Failed Deployment** | `runbooks/deployment-rollback.md` | < 5 minutes |
+| **Certificate Expiry** | `runbooks/cert-renewal.md` | < 1 hour |
+| **Redis Failure** | `runbooks/redis-failover.md` | < 10 minutes |
+| **Auth Service Down** | `runbooks/auth-outage.md` | < 5 minutes |
+
+### Example Runbook: Database Pool Exhausted
+
+```markdown
+# Runbook: Database Connection Pool Exhausted
+
+## Symptoms
+- API returning 500 errors
+- "Connection pool exhausted" in logs
+- Dashboard shows 100/100 connections in use
+
+## Immediate Actions (< 5 min)
+1. Check Grafana: Identify which service is leaking connections
+2. Restart the leaking service (rolling restart, no downtime)
+3. Monitor connection count - should drop to < 25 per service
+
+## Investigation (< 15 min)
+1. Check for long-running queries:
+   ```sql
+   SELECT * FROM pg_stat_activity
+   WHERE state = 'active' AND query_start < now() - interval '5 minutes';
+   ```
+2. Review recent deployments - was code change related?
+3. Check for unusual traffic patterns
+
+## Long-term Fix
+1. Add connection leak detection in code
+2. Implement connection timeout (10 minutes max)
+3. Add alerts for > 80% pool utilization
+4. Consider increasing pool size if legitimate usage
+
+## Post-Incident
+- Create Jira ticket for root cause analysis
+- Update this runbook with learnings
+- Review connection management in codebase
+```
+
+### Escalation Matrix
+
+| Severity | Initial | +15 min | +30 min | +1 hour |
+|----------|---------|---------|---------|---------|
+| **P0** | On-call engineer | Engineering manager | CTO | CEO |
+| **P1** | On-call engineer | Team lead | Engineering manager | - |
+| **P2** | On-call engineer | Team lead | - | - |
+| **P3** | On-call engineer | - | - | - |
+
+---
+
+## 💰 15. Cost Optimization
+
+### Cloud Cost Monitoring
+
+**FinOps Dashboard:** Track costs per service, environment, and resource
+
+| Resource | Monthly Budget | Current | Trend | Alert |
+|----------|----------------|---------|-------|-------|
+| **Neon DB** | $2,000 | $1,850 | ↗ +10% | Yellow |
+| **Vercel** | $1,500 | $1,200 | ↔ Stable | Green |
+| **Redis** | $500 | $450 | ↔ Stable | Green |
+| **S3/R2** | $300 | $280 | ↔ Stable | Green |
+| **Cloudflare** | $200 | $150 | ↘ -5% | Green |
+| **Total** | $4,500 | $3,930 | ↗ +8% | Green |
+
+### Cost Optimization Strategies
+
+| Area | Strategy | Savings | Implementation |
+|------|----------|---------|----------------|
+| **Database** | Auto-pause staging DBs after hours | 30% | Neon auto-suspend |
+| **Compute** | Right-size container resources | 20% | Resource profiling |
+| **Storage** | S3 lifecycle policies (90-day glacier) | 40% | Automated |
+| **CDN** | Cloudflare caching rules | 50% | Cache optimization |
+| **Monitoring** | Log retention tuning (90-day hot) | 35% | Automated archival |
+
+### Resource Tagging Strategy
+
+```yaml
+# Standard tags for all resources
+tags:
+  environment: production | staging | development
+  service: core | notes | attendance | hr
+  cost_center: engineering | operations | analytics
+  owner: team-name
+  criticality: high | medium | low
+```
+
+**Cost Allocation:**
+- **Per Customer**: Track costs by org_id for enterprise billing
+- **Per Feature**: Identify expensive features for optimization
+- **Per Environment**: Ensure staging < 20% of production costs
+
+---
+
+## 📖 16. Documentation Standards
+
+### Code Documentation
+
+```typescript
+/**
+ * Creates a new note in the database.
+ *
+ * @param input - Note creation payload
+ * @param input.title - Note title (max 200 chars)
+ * @param input.content - Note content (markdown supported)
+ * @param input.userId - Owner user ID
+ * @param input.orgId - Organization ID
+ *
+ * @returns Created note with generated ID
+ *
+ * @throws {ValidationError} If input validation fails
+ * @throws {DatabaseError} If database operation fails
+ * @throws {AuthorizationError} If user lacks permission
+ *
+ * @example
+ * ```typescript
+ * const note = await createNote({
+ *   title: "Meeting Notes",
+ *   content: "# Agenda\n- Item 1",
+ *   userId: "uuid-123",
+ *   orgId: "uuid-456"
+ * });
+ * ```
+ */
+export async function createNote(input: NoteInput): Promise<Note> {
+  // Implementation
+}
+```
+
+### API Documentation
+
+- **OpenAPI 3.1** specs for all REST endpoints
+- **GraphQL SDL** with detailed field descriptions
+- **Postman Collections** for manual testing
+- **SDK Documentation** auto-generated from specs
+
+### Architecture Documentation
+
+**ADR (Architecture Decision Records):**
+```markdown
+# ADR-001: Use Neon for Multi-Project Database
+
+## Status
+Accepted (2025-01-15)
+
+## Context
+Need multi-tenant database with project isolation and serverless scaling.
+
+## Decision
+Use Neon Postgres with separate projects per service.
+
+## Consequences
+**Positive:**
+- Complete data isolation per service
+- Independent scaling
+- Simplified backup/restore
+
+**Negative:**
+- No foreign keys across services
+- Cross-service queries require APIs
+- Higher base cost than single DB
+
+## Alternatives Considered
+1. Single Postgres with schemas
+2. MongoDB multi-tenancy
+3. Supabase
+
+## References
+- Neon docs: https://neon.tech/docs/
+- Multi-tenancy patterns: ...
+```
+
+---
+
+## ✅ 17. Summary
 
 The **Engineering & Security Guidelines** establish the foundation for safe, scalable, and compliant development in Vorklee2.
 
