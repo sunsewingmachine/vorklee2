@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifySession } from '@vorklee2/core-auth';
-import { getDefaultRateLimiter } from '@vorklee2/core-utils';
-import { errorResponse, createError } from './lib/api-response';
+// TEMPORARY: Removed unused imports to fix Edge Runtime compatibility
+// import { verifySession } from '@vorklee2/core-auth';
+// import { getDefaultRateLimiter } from '@vorklee2/core-utils';
+// import { errorResponse, createError } from './lib/api-response';
 
 // Rate limiting configuration per AppSpecV4
 // Default: 100 requests per minute (can be overridden by subscription tier)
@@ -28,22 +29,29 @@ export async function middleware(request: NextRequest) {
   }
 
   // Rate limiting for API routes using core-utils
+  // TEMPORARY: Disabled due to Edge Runtime incompatibility with ioredis
+  // TODO: Implement edge-compatible rate limiting using @upstash/ratelimit
   if (pathname.startsWith('/api/')) {
+    // For now, skip rate limiting entirely
+    // This will be re-enabled once we implement Edge Runtime-compatible solution
+    return NextResponse.next();
+
+    /* Original rate limiting code - disabled
     try {
       // Use IP or orgId as identifier (orgId preferred but requires auth)
       // For now, use IP until auth is fully implemented
       const identifier = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
-      
+
       const limiter = getDefaultRateLimiter();
-      
+
       // Note: RateLimiterRedis.consume is async, but middleware supports async
       // However, for simplicity in middleware, we'll use a sync check
       // In production, this should use Redis-based rate limiting properly
-      
+
       // For now, fallback to simple in-memory rate limiting if Redis is unavailable
       // This will be improved when auth is fully implemented with orgId-based limiting
       const rateLimitKey = `rate:${identifier}`;
-      
+
       // Try to consume rate limit (this may fail if Redis is not available)
       try {
         await limiter.consume(rateLimitKey);
@@ -63,7 +71,7 @@ export async function middleware(request: NextRequest) {
           return response;
         }
       }
-      
+
       // TEMPORARY: Skip auth for API in development
       return NextResponse.next();
     } catch (error) {
@@ -71,6 +79,7 @@ export async function middleware(request: NextRequest) {
       console.error('Rate limiting error:', error);
       return NextResponse.next();
     }
+    */
   }
 
   return NextResponse.next();
