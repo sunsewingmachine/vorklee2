@@ -1,7 +1,7 @@
 ---
-version: "5.2"
+version: "5.3"
 maintainer: "Vorklee2 Infrastructure & DevOps Team"
-last_updated: "2025-11-03 03:36:40 UTC"
+last_updated: "2025-01-15 12:00:00 UTC"
 tier: "enterprise"
 format: "markdown"
 framework: "Next.js 14+"
@@ -178,11 +178,77 @@ server_lifetime = 3600            # 1 hour
 - **Migrations**: 2 connections (schema changes)
 - **Admin**: 3 connections (manual operations)
 
+**Connection Pool Auto-Scaling Rules:**
+
+| Condition | Action | Threshold | Cooldown |
+|-----------|--------|-----------|----------|
+| **Utilization > 80% for 2min** | Scale up pool size by 25% | 80% | 5 minutes |
+| **Utilization > 90% for 1min** | Scale up pool size by 50% | 90% | 2 minutes |
+| **Utilization < 30% for 10min** | Scale down pool size by 25% | 30% | 10 minutes |
+| **Failed connections > 10 in 30s** | Open circuit breaker | 10 failures | 1 minute |
+| **Queue depth > 50 requests** | Alert + scale up | 50 queued | Immediate |
+
+**Auto-Scaling Implementation:**
+
+```typescript
+// Connection pool monitoring service
+export class ConnectionPoolMonitor {
+  private checkInterval = 30000; // 30 seconds
+
+  async monitorPool() {
+    const stats = await this.getPoolStats();
+    const utilization = (stats.active / stats.total) * 100;
+
+    if (utilization > 80 && this.shouldScaleUp()) {
+      await this.scaleUp(0.25); // Increase by 25%
+      logger.info('Scaled up connection pool', { utilization, newSize: stats.total * 1.25 });
+    } else if (utilization < 30 && this.shouldScaleDown()) {
+      await this.scaleDown(0.25); // Decrease by 25%
+      logger.info('Scaled down connection pool', { utilization, newSize: stats.total * 0.75 });
+    }
+
+    // Alert if approaching limits
+    if (utilization > 90) {
+      await sendAlert('Connection pool > 90% utilization', {
+        utilization,
+        active: stats.active,
+        total: stats.total,
+      });
+    }
+  }
+
+  private async getPoolStats() {
+    // Query PgBouncer stats endpoint or database
+    return {
+      active: await this.getActiveConnections(),
+      total: await this.getTotalConnections(),
+      queued: await this.getQueuedRequests(),
+    };
+  }
+}
+```
+
 **Connection Storm Prevention:**
-- Circuit breaker: Open after 10 failed connections
+- Circuit breaker: Open after 10 failed connections in 30 seconds
 - Exponential backoff: 1s, 2s, 4s, 8s, 16s (max)
 - Queue requests when pool exhausted (max 100 queued)
 - Alert when > 80% connections in use
+- Auto-scale pool when utilization > 80% for 2 minutes
+
+**Connection Pool Health Dashboard:**
+
+```sql
+-- Monitor connection pool health
+SELECT 
+  datname,
+  count(*) as total_connections,
+  count(*) FILTER (WHERE state = 'active') as active_connections,
+  count(*) FILTER (WHERE state = 'idle') as idle_connections,
+  (count(*) FILTER (WHERE state = 'active')::float / count(*)::float * 100) as utilization_pct
+FROM pg_stat_activity
+WHERE datname IS NOT NULL
+GROUP BY datname;
+```
 
 ---
 
@@ -216,6 +282,69 @@ server_lifetime = 3600            # 1 hour
 - Query plan analysis via `pg_stat_statements`
 - Index recommendations via Neon advisor
 - Materialized views for complex aggregations (refreshed hourly)
+
+### Per-Query-Type Performance SLAs
+
+**Query Performance Targets by Type:**
+
+| Query Type | P95 Target | P99 Target | Monitoring | Alert Threshold |
+|------------|-----------|-----------|------------|-----------------|
+| **SELECT (Simple)** | < 50ms | < 100ms | Neon Insights | P95 > 75ms |
+| **SELECT (Join 2-3 tables)** | < 100ms | < 250ms | Neon Insights | P95 > 150ms |
+| **SELECT (Complex aggregation)** | < 200ms | < 500ms | Neon Insights | P95 > 300ms |
+| **INSERT (Single row)** | < 50ms | < 100ms | Application logs | P95 > 75ms |
+| **INSERT (Bulk 100+ rows)** | < 500ms | < 1000ms | Application logs | P95 > 750ms |
+| **UPDATE (Single row)** | < 75ms | < 150ms | Application logs | P95 > 100ms |
+| **UPDATE (Bulk)** | < 300ms | < 600ms | Application logs | P95 > 450ms |
+| **DELETE (Single row)** | < 50ms | < 100ms | Application logs | P95 > 75ms |
+| **DELETE (Bulk)** | < 200ms | < 500ms | Application logs | P95 > 300ms |
+
+**Query Performance Monitoring:**
+
+```sql
+-- Enable pg_stat_statements
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+-- View slow queries
+SELECT 
+  query,
+  calls,
+  total_exec_time,
+  mean_exec_time,
+  max_exec_time,
+  (total_exec_time / 1000 / 60) as total_minutes
+FROM pg_stat_statements
+WHERE mean_exec_time > 100 -- Slower than 100ms
+ORDER BY mean_exec_time DESC
+LIMIT 20;
+```
+
+**Performance Regression Detection:**
+
+```typescript
+// CI/CD performance test
+export async function detectPerformanceRegression() {
+  const baseline = {
+    select: 50, // ms
+    insert: 50,
+    update: 75,
+    delete: 50,
+  };
+
+  const current = await measureQueryPerformance();
+
+  for (const [type, baselineTime] of Object.entries(baseline)) {
+    const currentTime = current[type];
+    const regression = ((currentTime - baselineTime) / baselineTime) * 100;
+
+    if (regression > 10) {
+      throw new Error(
+        `${type} query regression: ${regression.toFixed(1)}% slower than baseline`
+      );
+    }
+  }
+}
+```
 
 ---
 
@@ -266,12 +395,150 @@ Data → AES-256-GCM → Customer-Managed Key (CMK) → S3 Bucket
 
 ### Backup Verification
 
-| Test Type | Frequency | Success Criteria |
-|-----------|-----------|------------------|
-| **Restore Test** | Weekly | Full database restore < 1 hour |
-| **Data Integrity** | Daily | Checksum validation 100% match |
-| **Cross-Region Sync** | Hourly | Replication lag < 1 second |
-| **DR Drill** | Quarterly | Full failover + restore < RTO |
+**Automated Backup Testing (Mandatory):**
+
+| Test Type | Frequency | Success Criteria | Automation |
+|-----------|-----------|------------------|------------|
+| **Restore Test** | Weekly (Sunday 02:00 UTC) | Full database restore < 1 hour | Automated script |
+| **Data Integrity** | Daily (02:00 UTC) | Checksum validation 100% match | Automated validation |
+| **Cross-Region Sync** | Hourly | Replication lag < 1 second | Continuous monitoring |
+| **DR Drill** | Quarterly (First Sunday of quarter) | Full failover + restore < RTO | Semi-automated |
+| **Point-in-Time Recovery** | Monthly | PITR to 1 hour ago < 15 minutes | Automated test |
+
+**Automated Backup Restore Test Script:**
+
+```bash
+#!/bin/bash
+# scripts/backup-restore-test.sh
+
+set -e
+
+echo "🔄 Starting automated backup restore test..."
+
+# 1. Create test branch
+RESTORE_BRANCH="restore-test-$(date +%Y%m%d)"
+neonctl branches create \
+  --project vorklee-notes-prod \
+  --name "$RESTORE_BRANCH" \
+  --parent main
+
+# 2. Restore from latest snapshot
+echo "📥 Restoring from snapshot..."
+neonctl branches restore \
+  --project vorklee-notes-prod \
+  --branch "$RESTORE_BRANCH" \
+  --snapshot-id "$LATEST_SNAPSHOT"
+
+# 3. Verify data integrity
+echo "✅ Verifying data integrity..."
+psql "$RESTORE_DB_URL" <<EOF
+SELECT 
+  'notes' as table_name,
+  COUNT(*) as row_count,
+  MD5(string_agg(id::text, '' ORDER BY id)) as checksum
+FROM notes
+UNION ALL
+SELECT 
+  'notebooks' as table_name,
+  COUNT(*) as row_count,
+  MD5(string_agg(id::text, '' ORDER BY id)) as checksum
+FROM notebooks;
+EOF
+
+# 4. Verify checksums match production
+PRODUCTION_CHECKSUM=$(psql "$PRODUCTION_DB_URL" -t -c "SELECT MD5(string_agg(id::text, '')) FROM notes")
+RESTORE_CHECKSUM=$(psql "$RESTORE_DB_URL" -t -c "SELECT MD5(string_agg(id::text, '')) FROM notes")
+
+if [ "$PRODUCTION_CHECKSUM" != "$RESTORE_CHECKSUM" ]; then
+  echo "❌ Checksum mismatch! Backup may be corrupted."
+  exit 1
+fi
+
+# 5. Cleanup
+echo "🧹 Cleaning up test branch..."
+neonctl branches delete \
+  --project vorklee-notes-prod \
+  --name "$RESTORE_BRANCH"
+
+echo "✅ Backup restore test passed!"
+```
+
+**CI/CD Integration:**
+
+```yaml
+# .github/workflows/backup-test.yml
+name: Weekly Backup Restore Test
+
+on:
+  schedule:
+    - cron: '0 2 * * 0' # Every Sunday at 02:00 UTC
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  backup-restore-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run backup restore test
+        run: bash scripts/backup-restore-test.sh
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          PRODUCTION_DB_URL: ${{ secrets.DATABASE_URL_NOTES }}
+      
+      - name: Alert on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "🚨 Backup restore test failed!",
+              "attachments": [{
+                "color": "danger",
+                "text": "Weekly backup restore test failed. Manual intervention required."
+              }]
+            }
+```
+
+### Read Replica Consistency SLAs
+
+**Replication Lag Targets:**
+
+| Consistency Level | Max Lag | Use Case | Monitoring |
+|-------------------|---------|----------|------------|
+| **Strong Consistency** | < 1 second | Financial transactions, critical reads | Alert if > 1s |
+| **Eventual Consistency** | < 5 seconds | Analytics, reporting, dashboards | Alert if > 10s |
+| **Bounded Staleness** | < 30 seconds | Non-critical reads, caching | Alert if > 60s |
+
+**Replication Lag Monitoring:**
+
+```sql
+-- Monitor replication lag
+SELECT 
+  client_addr,
+  state,
+  sync_state,
+  EXTRACT(EPOCH FROM (now() - replay_lag)) as lag_seconds
+FROM pg_stat_replication
+WHERE lag_seconds > 1; -- Alert if lag > 1 second
+```
+
+**Read Replica Configuration:**
+
+```yaml
+# Neon read replica configuration
+read_replicas:
+  - name: analytics-replica
+    lag_threshold: 5s
+    use_case: analytics_queries
+    auto_failover: false
+  
+  - name: critical-read-replica
+    lag_threshold: 1s
+    use_case: financial_transactions
+    auto_failover: true
+```
 
 ### Backup Monitoring
 
@@ -331,7 +598,227 @@ pglogical create_subscription sub_notes   connection 'host=vorklee-notes-prod us
 
 ---
 
-## 🧰 9. DevOps and CI/CD
+## 🧰 9. Zero-Downtime Migration Runbooks
+
+### Migration Strategy Overview
+
+**Zero-Downtime Migration Principles:**
+1. **Additive Changes Only**: Add new columns/tables, never remove in single migration
+2. **Backward Compatible**: New code must work with old schema, old code with new schema
+3. **Gradual Rollout**: Deploy code changes before schema changes
+4. **Data Migration in Background**: Move data asynchronously, not during migration
+5. **Feature Flags**: Use flags to enable new features after migration complete
+
+### Zero-Downtime Migration Runbook
+
+**Scenario: Adding a new non-nullable column**
+
+**Step 1: Add Column as Nullable**
+```sql
+-- Migration 001_add_new_field.sql
+ALTER TABLE notes ADD COLUMN new_field TEXT NULL;
+```
+
+**Step 2: Deploy Code That Writes to Both Old and New Fields**
+```typescript
+// Code update (deployed while new_field is nullable)
+export async function createNote(data: CreateNoteInput) {
+  await db.insert(notes).values({
+    ...data,
+    old_field: data.fieldValue,
+    new_field: data.fieldValue, // Write to both
+  });
+}
+```
+
+**Step 3: Backfill Existing Data (Background Job)**
+```typescript
+// Background job: backfill new_field from old_field
+export async function backfillNewField() {
+  const batchSize = 1000;
+  let offset = 0;
+
+  while (true) {
+    const records = await db
+      .select()
+      .from(notes)
+      .where(isNull(notes.new_field))
+      .limit(batchSize)
+      .offset(offset);
+
+    if (records.length === 0) break;
+
+    await db
+      .update(notes)
+      .set({ new_field: notes.old_field })
+      .where(isNull(notes.new_field))
+      .limit(batchSize);
+
+    offset += batchSize;
+    await sleep(100); // Rate limit
+  }
+}
+```
+
+**Step 4: Deploy Code That Only Uses New Field**
+```typescript
+// Code update (new_field now has data)
+export async function createNote(data: CreateNoteInput) {
+  await db.insert(notes).values({
+    ...data,
+    new_field: data.fieldValue, // Only write to new field
+  });
+}
+
+// Stop writing to old_field
+```
+
+**Step 5: Add NOT NULL Constraint (After Backfill Complete)**
+```sql
+-- Migration 002_make_new_field_required.sql
+-- Verify all rows have new_field
+SELECT COUNT(*) FROM notes WHERE new_field IS NULL;
+-- Should return 0
+
+-- Add constraint
+ALTER TABLE notes ALTER COLUMN new_field SET NOT NULL;
+```
+
+**Step 6: Remove Old Column (Next Release)**
+```sql
+-- Migration 003_drop_old_field.sql (after old code removed)
+ALTER TABLE notes DROP COLUMN old_field;
+```
+
+### Migration Rollback Procedures
+
+**Rollback Strategy:**
+
+| Scenario | Rollback Method | Time Required | Data Loss Risk |
+|----------|----------------|---------------|----------------|
+| **Additive Migration** | Reverse migration SQL | < 5 minutes | None |
+| **Data Migration** | Restore from backup | < 1 hour | Up to RPO (5min) |
+| **Schema Change** | Restore from PITR | < 15 minutes | Up to RPO (5min) |
+| **Failed Deployment** | Redeploy previous version | < 2 minutes | None |
+
+**Rollback Checklist:**
+
+```bash
+# Rollback procedure
+1. Stop new deployments
+2. Verify issue with current migration
+3. Determine rollback method (SQL reverse vs restore)
+4. Notify team via Slack/PagerDuty
+5. Execute rollback
+6. Verify data integrity
+7. Resume deployments
+8. Document incident in post-mortem
+```
+
+### Migration Testing in CI/CD
+
+**Pre-Production Migration Test:**
+
+```yaml
+# .github/workflows/migration-test.yml
+name: Database Migration Test
+
+on:
+  pull_request:
+    paths:
+      - '**/drizzle/**/*.sql'
+      - '**/db/schema.ts'
+
+jobs:
+  migration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      # Create ephemeral test database
+      - name: Create test branch
+        run: |
+          neonctl branches create \
+            --project vorklee-notes-prod \
+            --name pr-${{ github.pr.number }} \
+            --parent staging
+      
+      # Run migration
+      - name: Run migration
+        run: npx drizzle-kit push
+        env:
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      
+      # Verify migration
+      - name: Verify schema
+        run: npx drizzle-kit verify
+      
+      # Test data integrity
+      - name: Run data integrity tests
+        run: npm run test:db-integrity
+      
+      # Performance regression check
+      - name: Check query performance
+        run: npm run test:query-performance
+      
+      # Cleanup
+      - name: Delete test branch
+        if: always()
+        run: |
+          neonctl branches delete \
+            --project vorklee-notes-prod \
+            --name pr-${{ github.pr.number }}
+```
+
+### Database Sharding Decision Framework
+
+**When to Consider Sharding:**
+
+| Metric | Threshold | Action |
+|--------|-----------|--------|
+| **Table Size** | > 100GB | Evaluate sharding |
+| **Row Count** | > 1 billion rows | Consider sharding |
+| **Query Performance** | P95 > 500ms despite indexing | Evaluate sharding |
+| **Write Throughput** | > 10,000 writes/second | Consider sharding |
+| **Storage Growth** | > 50GB/month | Plan for sharding |
+
+**Sharding Strategies:**
+
+| Strategy | Use Case | Complexity | Trade-offs |
+|----------|----------|------------|-----------|
+| **Horizontal (Range)** | Time-series data, sequential IDs | Low | Uneven distribution |
+| **Horizontal (Hash)** | Even distribution needed | Medium | Cross-shard queries difficult |
+| **Vertical** | Different access patterns per feature | Low | Fewer benefits |
+| **Directory-Based** | Complex routing requirements | High | Single point of failure |
+
+**Sharding Example: Notes Table by organization_id**
+
+```sql
+-- Shard 1: organizations 00000000-0000-0000-0000-7fffffffffff
+CREATE TABLE notes_shard_1 PARTITION OF notes
+FOR VALUES FROM ('00000000-0000-0000-0000-000000000000')
+TO ('80000000-0000-0000-0000-7fffffffffff');
+
+-- Shard 2: organizations 80000000-0000-0000-0000-ffffffffffff
+CREATE TABLE notes_shard_2 PARTITION OF notes
+FOR VALUES FROM ('80000000-0000-0000-0000-800000000000')
+TO ('ffffffff-ffff-ffff-ffff-ffffffffffff');
+```
+
+**Sharding Implementation Checklist:**
+
+- [ ] Analyze current table size and growth rate
+- [ ] Identify sharding key (org_id, user_id, time-based)
+- [ ] Design shard routing logic
+- [ ] Implement shard-aware query layer
+- [ ] Test cross-shard query performance
+- [ ] Plan data migration strategy
+- [ ] Implement monitoring for shard distribution
+- [ ] Document shard rebalancing procedures
+
+---
+
+## 🧰 10. DevOps and CI/CD
 
 All DB migrations managed via **Drizzle ORM + GitHub Actions**.
 
@@ -350,7 +837,33 @@ jobs:
 ```
 
 - Each PR creates an ephemeral Neon branch for testing.  
-- After merge, the branch is deleted automatically.  
+- After merge, the branch is deleted automatically.
+
+### Migration Deployment Order
+
+**Zero-Downtime Deployment Sequence:**
+
+1. **Database Schema Changes** (if additive only)
+   - Deploy migration to staging
+   - Verify migration success
+   - Deploy to production
+
+2. **Application Code Deployment**
+   - Deploy code that supports both old and new schema
+   - Verify application works correctly
+
+3. **Data Migration** (if needed)
+   - Run background jobs to migrate data
+   - Monitor migration progress
+   - Verify data integrity
+
+4. **Final Schema Changes** (non-nullable, constraints)
+   - Deploy final migration after data migration complete
+   - Verify constraints pass
+
+5. **Code Cleanup** (next release)
+   - Remove old field references
+   - Drop deprecated columns  
 
 ---
 
@@ -424,7 +937,16 @@ WHERE deleted_at IS NULL;
 
 This blueprint defines the Neon multi-project database setup and infrastructure policy for the **Vorklee2 Enterprise Platform**.
 
-**Key Enhancements:**
+**Key Enhancements in v5.3:**
+- **Zero-Downtime Migration Runbooks**: Step-by-step procedures with rollback strategies
+- **Connection Pool Auto-Scaling**: Automated scaling rules (scale up at 80% utilization, scale down at 30%)
+- **Per-Query-Type SLAs**: Specific performance targets for SELECT, INSERT, UPDATE, DELETE operations
+- **Automated Backup Testing**: Mandatory weekly restore tests with CI/CD integration
+- **Read Replica Consistency SLAs**: Strong (<1s), eventual (<5s), bounded staleness (<30s) targets
+- **Database Sharding Decision Framework**: Clear criteria and strategies for when to shard (100GB+, 1B rows)
+- **Performance Regression Detection**: Automated CI/CD checks to prevent query slowdowns
+
+**Previous Enhancements:**
 - **Enhanced RLS**: Role-based policies with granular CRUD permissions
 - **Connection Pooling**: PgBouncer with transaction mode, 25 connections per service
 - **Performance SLIs**: P95 latency < 100ms, P99 < 250ms with continuous monitoring
@@ -434,7 +956,7 @@ This blueprint defines the Neon multi-project database setup and infrastructure 
 - **Data Anonymization**: K-anonymity and differential privacy for analytics
 - **Auto-Scaling**: Dynamic compute (1-8 vCPUs) based on 70% CPU threshold
 
-It enforces isolation, compliance, and scalability — ensuring long-term stability and security.
+It enforces isolation, compliance, scalability, and operational excellence — ensuring long-term stability, security, and zero-downtime deployments.
 
 ---
 

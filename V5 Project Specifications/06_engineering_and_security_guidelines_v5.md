@@ -1,7 +1,7 @@
 ---
-version: "5.2"
+version: "5.3"
 maintainer: "Vorklee2 DevSecOps & Engineering Team"
-last_updated: "2025-11-03 03:38:28 UTC"
+last_updated: "2025-01-15 12:00:00 UTC"
 tier: "enterprise"
 format: "markdown"
 framework: "Next.js 14+"
@@ -183,6 +183,400 @@ export default function() {
 }
 ```
 
+### Mutation Testing
+
+**Purpose**: Validate test quality by introducing code changes and verifying tests catch failures.
+
+**Tool**: Stryker (for TypeScript/JavaScript)
+
+**Implementation:**
+
+```bash
+# Install Stryker
+npm install --save-dev @stryker-mutator/core @stryker-mutator/jest-runner
+
+# Run mutation testing
+npx stryker run
+```
+
+**Configuration:**
+
+```javascript
+// stryker.conf.json
+{
+  "packageManager": "npm",
+  "reporters": ["html", "clear-text", "progress"],
+  "testRunner": "jest",
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.spec.ts"
+  ],
+  "mutator": {
+    "plugins": ["typescript"]
+  },
+  "thresholds": {
+    "high": 80,
+    "low": 70,
+    "break": 60
+  }
+}
+```
+
+**Mutation Testing Requirements:**
+
+| Category | Minimum Score | Coverage Area |
+|----------|--------------|--------------|
+| **Critical Paths** | ≥ 80% | Authentication, payment processing |
+| **Business Logic** | ≥ 70% | Service layer, core functions |
+| **Utilities** | ≥ 60% | Helper functions, validators |
+
+**CI/CD Integration:**
+
+```yaml
+# .github/workflows/mutation-test.yml
+- name: Mutation Testing
+  run: npx stryker run
+  continue-on-error: true # Don't fail build, but report
+```
+
+### Contract Testing
+
+**Purpose**: Ensure API contracts between consumer (mobile app) and provider (API) remain stable.
+
+**Tool**: Pact (Consumer-Driven Contracts)
+
+**Implementation:**
+
+```typescript
+// Consumer (Mobile App): Define expected contract
+import { Pact } from '@pact-foundation/pact';
+
+describe('Notes API Contract', () => {
+  const provider = new Pact({
+    consumer: 'notes-mobile-app',
+    provider: 'notes-api',
+    port: 1234,
+  });
+
+  beforeAll(() => provider.setup());
+  afterAll(() => provider.finalize());
+
+  it('returns list of notes', async () => {
+    await provider.addInteraction({
+      state: 'user has notes',
+      uponReceiving: 'a request for notes',
+      withRequest: {
+        method: 'GET',
+        path: '/notes/v1/notes',
+        headers: { Authorization: 'Bearer token' },
+      },
+      willRespondWith: {
+        status: 200,
+        body: {
+          success: true,
+          data: [{ id: 'uuid', title: 'Note 1' }],
+        },
+      },
+    });
+
+    const response = await fetch('http://localhost:1234/notes/v1/notes');
+    expect(response.status).toBe(200);
+  });
+});
+
+// Provider (API): Verify against contracts
+import { Verifier } from '@pact-foundation/pact';
+
+const opts = {
+  provider: 'notes-api',
+  providerBaseUrl: 'http://localhost:3000',
+  pactUrls: ['https://pact-broker.com/pacts/provider/notes-api/consumer/notes-mobile-app/latest'],
+  publishVerificationResult: true,
+  providerVersion: '1.0.0',
+};
+
+new Verifier(opts).verifyProvider().then(() => {
+  console.log('Contract verification passed!');
+});
+```
+
+**Contract Testing Workflow:**
+
+1. **Consumer** (mobile app) defines expected contract → Publish to Pact Broker
+2. **Provider** (API) verifies against contract in CI/CD
+3. **Breaking changes** detected before deployment
+4. **Contracts versioned** and stored in Pact Broker
+
+**CI/CD Integration:**
+
+```yaml
+# Provider verification (API service)
+- name: Verify API Contracts
+  run: |
+    npx @pact-foundation/pact-cli verify \
+      --provider-base-url http://localhost:3000 \
+      --pact-broker-url https://pact-broker.com \
+      --provider-version ${{ github.sha }}
+```
+
+### Chaos Engineering
+
+**Purpose**: Proactively test system resilience by injecting failures.
+
+**Tool**: Chaos Toolkit, Litmus, or custom scripts
+
+**Chaos Engineering Schedule:**
+
+| Test Type | Frequency | Scope | Owner |
+|-----------|-----------|-------|-------|
+| **Network Latency** | Monthly | Staging | Platform Team |
+| **Database Connection Failure** | Quarterly | Staging | Database Team |
+| **Service Outage** | Quarterly | Staging | Platform Team |
+| **High Load** | Monthly | Staging | Performance Team |
+| **Cache Failure** | Monthly | Staging | Platform Team |
+
+**Chaos Test Scenarios:**
+
+```typescript
+// Example: Database connection failure injection
+import { chaos } from '@vorklee/chaos-toolkit';
+
+describe('Chaos Test: Database Failure', () => {
+  it('should degrade gracefully when DB is unavailable', async () => {
+    // Simulate database failure
+    await chaos.injectFailure('database', {
+      type: 'connection_timeout',
+      duration: 30000, // 30 seconds
+    });
+
+    // Verify application handles failure
+    const response = await api.getNotes();
+    
+    // Should return cached data or graceful error
+    expect(response.status).toBe(200); // Or 503 with retry header
+    expect(response.headers['retry-after']).toBeDefined();
+  });
+
+  it('should recover when DB becomes available', async () => {
+    await chaos.injectFailure('database', { duration: 5000 });
+    await sleep(6000);
+    
+    // Service should recover automatically
+    const response = await api.getNotes();
+    expect(response.status).toBe(200);
+    expect(response.data).toBeDefined();
+  });
+});
+```
+
+**Chaos Test Checklist:**
+
+- [ ] Network latency injection (100ms, 500ms, 1000ms)
+- [ ] Database connection timeout
+- [ ] Redis cache unavailability
+- [ ] External API failures
+- [ ] High CPU/memory usage
+- [ ] Partial service outages
+- [ ] Network partition scenarios
+
+**Post-Chaos Analysis:**
+
+```typescript
+// Document chaos test results
+interface ChaosTestResult {
+  scenario: string;
+  timestamp: string;
+  duration: number;
+  impact: {
+    errorRate: number;
+    latencyIncrease: number;
+    userAffected: number;
+  };
+  recovery: {
+    timeToRecover: number;
+    automatic: boolean;
+  };
+  improvements: string[];
+}
+```
+
+### WCAG 2.1 AA Compliance Testing
+
+**Purpose**: Ensure web applications are accessible to users with disabilities.
+
+**WCAG 2.1 AA Requirements:**
+
+| Principle | Requirement | Test Method |
+|-----------|------------|-------------|
+| **Perceivable** | Color contrast ≥ 4.5:1 | Automated (axe, pa11y) |
+| **Perceivable** | Text alternatives for images | Manual + automated |
+| **Operable** | Keyboard navigation | Manual testing |
+| **Operable** | No seizure triggers | Automated (flash detection) |
+| **Understandable** | Error messages clear | Manual review |
+| **Robust** | Screen reader compatible | Manual + automated |
+
+**Automated Accessibility Testing:**
+
+```typescript
+// E2E test with accessibility checks
+import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test('Notes page should be accessible', async ({ page }) => {
+  await page.goto('/notes');
+
+  // Run axe accessibility scan
+  const accessibilityScanResults = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+
+  // Check for violations
+  expect(accessibilityScanResults.violations).toEqual([]);
+  
+  // Check for incomplete tests (warnings)
+  expect(accessibilityScanResults.incomplete).toEqual([]);
+});
+```
+
+**CI/CD Integration:**
+
+```yaml
+# .github/workflows/accessibility.yml
+- name: Accessibility Test
+  run: |
+    npm install -g pa11y-ci
+    pa11y-ci --sitemap https://staging.vorklee.com/sitemap.xml \
+      --standard WCAG2AA \
+      --reporter json \
+      --reporter cli
+```
+
+**Manual Testing Checklist:**
+
+- [ ] Keyboard navigation (Tab, Enter, Space, Arrow keys)
+- [ ] Screen reader testing (NVDA, JAWS, VoiceOver)
+- [ ] Color contrast verification (WebAIM Contrast Checker)
+- [ ] Focus indicators visible
+- [ ] Skip to main content link
+- [ ] Form labels and error messages
+- [ ] Alt text for images
+- [ ] Heading hierarchy (h1 → h2 → h3)
+
+### Load Testing Schedule
+
+**Mandatory Load Testing:**
+
+| Environment | Frequency | Scenarios | Thresholds |
+|-------------|-----------|----------|------------|
+| **Staging** | Weekly (Sunday 03:00 UTC) | Baseline, peak traffic | P95 < 250ms, error rate < 1% |
+| **Production** | Monthly (First Sunday 02:00 UTC) | Stress test, spike test | P95 < 250ms, error rate < 0.1% |
+| **Pre-Release** | Before each release | Full regression | All SLAs met |
+
+**Load Test Scenarios:**
+
+```javascript
+// k6 load test scenarios
+export const scenarios = {
+  // Baseline: Normal traffic
+  baseline: {
+    executor: 'constant-vus',
+    vus: 100,
+    duration: '10m',
+  },
+  
+  // Peak traffic: Double normal load
+  peak: {
+    executor: 'ramping-vus',
+    startVUs: 100,
+    stages: [
+      { duration: '5m', target: 200 },
+      { duration: '10m', target: 200 },
+      { duration: '5m', target: 100 },
+    ],
+  },
+  
+  // Stress test: Find breaking point
+  stress: {
+    executor: 'ramping-vus',
+    startVUs: 50,
+    stages: [
+      { duration: '5m', target: 500 },
+      { duration: '10m', target: 500 },
+      { duration: '5m', target: 1000 },
+      { duration: '10m', target: 1000 },
+    ],
+  },
+  
+  // Spike test: Sudden traffic increase
+  spike: {
+    executor: 'ramping-vus',
+    startVUs: 100,
+    stages: [
+      { duration: '1m', target: 1000 }, // Sudden spike
+      { duration: '5m', target: 1000 },
+      { duration: '1m', target: 100 }, // Sudden drop
+    ],
+  },
+};
+```
+
+### Browser/Device Testing Matrix
+
+**Required Testing Matrix:**
+
+| Platform | Browsers | Versions | Devices | Testing Frequency |
+|----------|----------|----------|---------|-------------------|
+| **Desktop** | Chrome, Firefox, Safari, Edge | Latest 2 versions | N/A | Every PR |
+| **Mobile Web** | Chrome (Android), Safari (iOS) | Latest 2 versions | iPhone 12+, Samsung Galaxy S21+ | Every PR |
+| **Tablet** | Safari (iPad), Chrome (Android) | Latest 2 versions | iPad Air, Samsung Galaxy Tab | Weekly |
+| **Native iOS** | N/A | iOS 15+, iOS 16+ | iPhone 12, iPhone 14, iPhone 15 | Every PR |
+| **Native Android** | N/A | Android 12+, Android 13+ | Samsung Galaxy S21, Pixel 7 | Every PR |
+
+**Mobile-Specific Testing:**
+
+```typescript
+// React Native device testing
+describe('Mobile Network Conditions', () => {
+  it('should handle slow 3G network', async () => {
+    await device.setNetworkCondition('slow-3g');
+    
+    const startTime = Date.now();
+    await api.getNotes();
+    const duration = Date.now() - startTime;
+    
+    // Should complete within reasonable time even on slow network
+    expect(duration).toBeLessThan(5000);
+  });
+
+  it('should handle offline mode', async () => {
+    await device.setNetworkCondition('offline');
+    
+    const response = await api.getNotes();
+    
+    // Should return cached data or queue for sync
+    expect(response).toBeDefined();
+  });
+});
+
+// Battery usage testing
+describe('Battery Usage', () => {
+  it('should not drain battery with background sync', async () => {
+    const initialBattery = await getBatteryLevel();
+    
+    // Run background sync for 10 minutes
+    await runBackgroundSync(10 * 60 * 1000);
+    
+    const finalBattery = await getBatteryLevel();
+    const batteryDrain = initialBattery - finalBattery;
+    
+    // Should drain < 5% per hour
+    expect(batteryDrain).toBeLessThan(0.05);
+  });
+});
+```
+
 ### Test Data Management
 
 - **Test Databases**: Separate Neon branch per PR (ephemeral)
@@ -192,10 +586,10 @@ export default function() {
 
 ### Continuous Testing
 
-- **Pre-commit**: Unit tests + linting (via Husky)
-- **PR**: Full test suite + coverage report
-- **Nightly**: E2E + performance + security scans
-- **Pre-release**: Full regression + load testing
+- **Pre-commit**: Unit tests + linting + mutation testing (critical paths only)
+- **PR**: Full test suite + coverage report + contract tests + accessibility scan
+- **Nightly**: E2E + performance + security scans + chaos tests (staging)
+- **Pre-release**: Full regression + load testing + chaos engineering + WCAG audit
 
 ---
 
@@ -473,9 +867,249 @@ ALTER TABLE notes DROP COLUMN old_field;
 
 ## 🔐 6. Security Guidelines
 
+### OWASP Top 10 2021 Mapping & Prevention
+
+The OWASP Top 10 represents the most critical security risks. Vorklee2 implements comprehensive controls to prevent each:
+
+| OWASP Risk | Prevention Strategy | Implementation | Verification |
+|------------|-------------------|----------------|-------------|
+| **A01:2021 - Broken Access Control** | RBAC + RLS + JWT validation | Role-based permissions, org_id scoping, RLS policies | Quarterly access reviews, automated tests |
+| **A02:2021 - Cryptographic Failures** | Strong encryption + key management | TLS 1.3, AES-256, Argon2id, CMK rotation | Annual crypto audit, key rotation logs |
+| **A03:2021 - Injection** | Parameterized queries + input validation | Drizzle ORM (no raw SQL), Zod schemas | SAST scans, dependency checks |
+| **A04:2021 - Insecure Design** | Secure design patterns + threat modeling | Security reviews, architecture decisions | Design reviews, threat modeling sessions |
+| **A05:2021 - Security Misconfiguration** | Hardened defaults + automated checks | Security headers, CSP, secure configs | Configuration scanning, compliance checks |
+| **A06:2021 - Vulnerable Components** | Dependency scanning + updates | Snyk, Dependabot, SBOM, 48h patch SLA | Weekly scans, quarterly updates |
+| **A07:2021 - Authentication Failures** | Strong auth + MFA + rate limiting | Argon2id, JWT, MFA, rate limits | Penetration testing, audit logs |
+| **A08:2021 - Software & Data Integrity** | Signed artifacts + supply chain security | GPG commits, SBOM, provenance | CI/CD checks, artifact verification |
+| **A09:2021 - Logging Failures** | Comprehensive audit logging | Structured logs, trace_id, PII redaction | Log analysis, incident response drills |
+| **A10:2021 - SSRF** | Input validation + network restrictions | URL validation, IP whitelisting, network policies | Security testing, network audits |
+
+**OWASP Prevention Checklist:**
+- ✅ Access control tested with automated tests
+- ✅ Encryption at rest and in transit enforced
+- ✅ All inputs validated with Zod schemas
+- ✅ Security headers configured (see below)
+- ✅ Dependencies scanned weekly
+- ✅ Authentication failures logged and rate-limited
+- ✅ All code changes GPG-signed
+- ✅ Audit logs comprehensive and tamper-proof
+- ✅ SSRF protections in place for external requests
+
+### Security Headers (Complete List)
+
+**Required Security Headers for All Applications:**
+
+| Header | Purpose | Value | Implementation |
+|--------|---------|-------|----------------|
+| **Strict-Transport-Security (HSTS)** | Force HTTPS | `max-age=31536000; includeSubDomains; preload` | Prevents downgrade attacks |
+| **Content-Security-Policy (CSP)** | XSS protection | See CSP configuration below | Blocks inline scripts, unsafe eval |
+| **X-Frame-Options** | Clickjacking protection | `DENY` or `SAMEORIGIN` | Prevents iframe embedding |
+| **X-Content-Type-Options** | MIME sniffing protection | `nosniff` | Prevents MIME type confusion |
+| **Referrer-Policy** | Privacy protection | `strict-origin-when-cross-origin` | Limits referrer information |
+| **Permissions-Policy** | Feature restrictions | See configuration below | Restricts browser features |
+| **X-XSS-Protection** | Legacy XSS protection | `1; mode=block` | Additional XSS protection (legacy) |
+
+**Next.js Implementation:**
+
+```typescript
+// next.config.ts
+export default {
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Remove unsafe-* in production
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://api.vorklee.com https://*.sentry.io",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "upgrade-insecure-requests",
+            ].join('; '),
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: [
+              'camera=()',
+              'microphone=()',
+              'geolocation=()',
+              'interest-cohort=()', // Disable FLoC
+            ].join(', '),
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
+    ];
+  },
+};
+```
+
+**CSP Configuration (Production-Ready):**
+
+```typescript
+// Production CSP (strict)
+const productionCSP = [
+  "default-src 'self'",
+  "script-src 'self'", // No unsafe-inline or unsafe-eval
+  "style-src 'self' 'unsafe-inline'", // CSS may need inline for Material-UI
+  "img-src 'self' data: https://cdn.vorklee.com https://*.cloudflare.com",
+  "font-src 'self' data:",
+  "connect-src 'self' https://api.vorklee.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "upgrade-insecure-requests",
+  "report-uri /api/csp-report", // CSP violation reporting
+].join('; ');
+```
+
+**CSP Violation Reporting:**
+
+```typescript
+// apps/notes/app/api/csp-report/route.ts
+export async function POST(request: NextRequest) {
+  const report = await request.json();
+  
+  // Log CSP violations (potential XSS attempts)
+  logger.warn('CSP Violation', {
+    'csp-report': report['csp-report'],
+    ip: request.headers.get('x-forwarded-for'),
+    user_agent: request.headers.get('user-agent'),
+  });
+  
+  // Alert security team if critical violation
+  if (report['csp-report']['blocked-uri']?.includes('malicious')) {
+    await sendSecurityAlert('CSP Violation Detected', report);
+  }
+  
+  return new Response(null, { status: 204 });
+}
+```
+
+**Mobile App Security Headers:**
+
+Mobile apps (iOS/Android) use platform-specific security:
+- **iOS**: Certificate pinning, App Transport Security (ATS), Keychain storage
+- **Android**: Network Security Config, certificate pinning, Keystore
+
+### Vulnerability Disclosure Policy
+
+**Responsible Disclosure Process:**
+
+1. **Report**: Security researchers report via `security@vorklee.com` or HackerOne (if applicable)
+2. **Acknowledgment**: Response within 24 hours
+3. **Investigation**: Security team investigates within 7 days
+4. **Resolution**: Patch developed and deployed based on severity
+5. **Disclosure**: Public disclosure after patch deployment (coordinated disclosure)
+
+**Severity Response Times:**
+- **Critical**: 24 hours (immediate fix + emergency deploy)
+- **High**: 7 days
+- **Medium**: 30 days
+- **Low**: 90 days
+
+**Bug Bounty Program (Optional):**
+- HackerOne or similar platform
+- Rewards: $100 (Low) to $10,000 (Critical)
+- Scope: Production applications only
+- Exclusions: DoS attacks, social engineering, physical access
+
+### Penetration Testing
+
+**Frequency:**
+- **External Pentest**: Quarterly by certified third-party (e.g., Offensive Security, Synack)
+- **Internal Pentest**: Monthly by security team
+- **Automated Scans**: Weekly (OWASP ZAP, Burp Suite)
+
+**Scope:**
+- All public APIs
+- Authentication endpoints
+- Admin interfaces
+- Mobile apps (annual)
+- Infrastructure (quarterly)
+
+**Pentest Deliverables:**
+- Executive summary
+- Technical findings with CVSS scores
+- Remediation recommendations
+- Re-test after fixes
+
+### Security Testing in CI/CD
+
+**SAST (Static Application Security Testing):**
+
+```yaml
+# .github/workflows/security.yml
+- name: SAST Scan
+  uses: github/super-linter@v4
+  with:
+    VALIDATE_ALL_CODEBASE: true
+
+- name: Snyk SAST
+  uses: snyk/actions/node@master
+  env:
+    SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  with:
+    args: --severity-threshold=high
+```
+
+**DAST (Dynamic Application Security Testing):**
+
+```yaml
+- name: OWASP ZAP Scan
+  uses: zaproxy/action-baseline@v0.10.0
+  with:
+    target: 'https://staging.vorklee.com'
+    rules_file_name: '.zap/rules.tsv'
+    cmd_options: '-a'
+```
+
+**Secrets Scanning:**
+
+```yaml
+- name: TruffleHog Secret Scan
+  uses: trufflesecurity/trufflehog@main
+  with:
+    path: ./
+    base: ${{ github.event.repository.default_branch }}
+    head: HEAD
+```
+
+**False-Positive Handling:**
+- Security team reviews all findings
+- Confirmed false positives added to `.secretsignore`
+- Real secrets trigger immediate incident response
+- Quarterly review of ignored patterns
+
 ### Authentication
 - All user and service authentication handled by Core Identity.
-- JWT validation occurs at app layer with Core’s public key.
+- JWT validation occurs at app layer with Core's public key.
 - No credentials hardcoded or logged.
 
 ### Authorization
@@ -597,7 +1231,7 @@ Disaster recovery test conducted every 3 months.
   "level": "error",
   "service": "notes-api",
   "environment": "production",
-  "version": "v5.2.1",
+  "version": "v5.3.0",
   "trace_id": "550e8400-e29b-41d4-a716-446655440000",
   "span_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
   "user_id": "123e4567-e89b-12d3-a456-426614174000",
@@ -616,9 +1250,14 @@ Disaster recovery test conducted every 3 months.
   "context": {
     "note_id": "note_xyz789",
     "retry_count": 2
-  }
+  },
+  "retention_tier": "hot" // Used for lifecycle management
 }
 ```
+
+### Log Retention & Lifecycle Management
+
+**See Section 12 for detailed log retention tiers and cost optimization strategies.**
 
 ### Log Levels
 
@@ -732,7 +1371,546 @@ What was done to fix it
 What we learned and how to prevent recurrence
 ```
 
-## 🧩 12. DevOps Observability Dashboard
+## 🧩 12. Observability & Monitoring
+
+### Log Retention Tiers & Cost Optimization
+
+**Log Retention Strategy:**
+
+| Tier | Retention Period | Storage | Cost Estimate | Purpose |
+|------|-----------------|---------|---------------|---------|
+| **Hot Storage** | 7 days | Elasticsearch / Datadog | $0.50/GB/month | Active debugging, real-time alerts |
+| **Warm Storage** | 30 days | S3 (Standard) | $0.023/GB/month | Recent investigation, compliance |
+| **Cold Storage** | 1 year | S3 Glacier | $0.004/GB/month | Compliance, audit trails |
+| **Archive** | 7 years | S3 Glacier Deep Archive | $0.00099/GB/month | Legal requirements (HIPAA) |
+
+**Cost Optimization Example:**
+
+```typescript
+// Log lifecycle management
+export class LogLifecycleManager {
+  async archiveOldLogs() {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // Move logs older than 7 days to warm storage
+    await this.moveToWarmStorage(sevenDaysAgo);
+    
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    // Move logs older than 30 days to cold storage
+    await this.moveToColdStorage(thirtyDaysAgo);
+  }
+
+  async moveToWarmStorage(beforeDate: Date) {
+    // Compress and move to S3
+    const logs = await this.getLogsBefore(beforeDate);
+    const compressed = await this.compressLogs(logs);
+    await s3.putObject({
+      Bucket: 'vorklee-logs-warm',
+      Key: `logs-${beforeDate.toISOString()}.gz`,
+      Body: compressed,
+      StorageClass: 'STANDARD',
+    });
+    
+    // Delete from hot storage
+    await this.deleteFromHotStorage(beforeDate);
+  }
+}
+```
+
+**Log Retention Policies by Log Type:**
+
+| Log Type | Hot (7d) | Warm (30d) | Cold (1y) | Archive (7y) | Rationale |
+|----------|----------|------------|-----------|--------------|----------|
+| **Application Logs** | ✅ | ✅ | ✅ | ❌ | Debugging, compliance |
+| **Audit Logs** | ✅ | ✅ | ✅ | ✅ (HIPAA: 6y) | Compliance requirement |
+| **Access Logs** | ✅ | ✅ | ❌ | ❌ | Security investigation |
+| **Error Logs** | ✅ | ✅ | ✅ | ❌ | Long-term analysis |
+| **Performance Logs** | ✅ | ❌ | ❌ | ❌ | Real-time optimization |
+
+**Cost Monitoring:**
+
+```typescript
+// Monitor log storage costs
+export async function monitorLogCosts() {
+  const hotSize = await getHotStorageSize();
+  const warmSize = await getWarmStorageSize();
+  const coldSize = await getColdStorageSize();
+  
+  const monthlyCost = 
+    (hotSize * 0.50) +      // Hot: $0.50/GB/month
+    (warmSize * 0.023) +    // Warm: $0.023/GB/month
+    (coldSize * 0.004);     // Cold: $0.004/GB/month
+  
+  // Alert if costs exceed budget
+  if (monthlyCost > 1000) {
+    await sendAlert('Log storage costs exceeding budget', {
+      monthlyCost,
+      budget: 1000,
+    });
+  }
+}
+```
+
+### Alert Management & Fatigue Prevention
+
+**Alert Aggregation Strategy:**
+
+**Problem**: Too many alerts → Alert fatigue → Critical alerts ignored
+
+**Solution**: Severity-based aggregation and routing
+
+**Alert Severity Levels:**
+
+| Severity | Description | Routing | Frequency Limit |
+|----------|-------------|---------|----------------|
+| **P0 (Critical)** | Service down, data loss | PagerDuty → On-call → Escalate to manager | No limit |
+| **P1 (High)** | Major feature broken | PagerDuty → On-call | Max 10/hour |
+| **P2 (Medium)** | Degraded performance | Slack #alerts channel | Max 20/hour |
+| **P3 (Low)** | Minor issues | Slack #monitoring channel | Max 50/hour |
+
+**Alert Aggregation Rules:**
+
+```typescript
+// Alert aggregation service
+export class AlertAggregator {
+  private alertWindow = 60000; // 1 minute window
+  
+  async processAlert(alert: Alert) {
+    // Group similar alerts
+    const key = `${alert.service}-${alert.type}-${alert.severity}`;
+    const existing = await this.getAlertsInWindow(key, this.alertWindow);
+    
+    if (existing.length > 0) {
+      // Aggregate: Update count, suppress duplicate
+      await this.aggregateAlert(existing[0], alert);
+      return; // Don't send duplicate
+    }
+    
+    // New alert or outside window → send
+    await this.sendAlert(alert);
+  }
+
+  private async aggregateAlert(existing: Alert, newAlert: Alert) {
+    // Update count and timestamp
+    existing.count = (existing.count || 1) + 1;
+    existing.lastOccurrence = new Date();
+    
+    // Only re-send if severity is P0 or count threshold reached
+    if (existing.severity === 'P0' || existing.count >= 5) {
+      await this.sendAlert({
+        ...existing,
+        message: `${existing.message} (${existing.count} occurrences)`,
+      });
+    }
+  }
+}
+```
+
+**Alert Routing Configuration:**
+
+```yaml
+# alert-routing.yml
+routing:
+  p0:
+    channels: [pagerduty, slack-critical]
+    escalation: true
+    deduplication_window: 0 # No deduplication for P0
+    
+  p1:
+    channels: [pagerduty, slack-alerts]
+    escalation: false
+    deduplication_window: 300000 # 5 minutes
+    
+  p2:
+    channels: [slack-alerts]
+    deduplication_window: 600000 # 10 minutes
+    frequency_limit: 20 # Max 20 per hour
+    
+  p3:
+    channels: [slack-monitoring]
+    deduplication_window: 1800000 # 30 minutes
+    frequency_limit: 50 # Max 50 per hour
+```
+
+**Alert Fatigue Prevention Checklist:**
+
+- ✅ Aggregate similar alerts within time window
+- ✅ Use severity-based routing (P0 → PagerDuty, P2 → Slack)
+- ✅ Frequency limits per alert type
+- ✅ Deduplication rules (suppress duplicates for N minutes)
+- ✅ Alert grouping by service/type
+- ✅ Escalation only for P0/P1
+- ✅ Regular review of alert rules (quarterly)
+- ✅ Metrics: Alert volume, response time, false positive rate
+
+### Synthetic Monitoring
+
+**Purpose**: Proactively monitor critical user journeys from external perspective.
+
+**Synthetic Monitoring Requirements:**
+
+| Journey | Frequency | Locations | Success Criteria |
+|---------|-----------|-----------|------------------|
+| **User Login** | Every 5 minutes | US, EU, APAC | < 3s, success rate > 99.5% |
+| **Create Note** | Every 5 minutes | US, EU | < 2s, success rate > 99% |
+| **View Dashboard** | Every 10 minutes | US, EU, APAC | < 2s, success rate > 99% |
+| **API Health Check** | Every 1 minute | All regions | < 500ms, success rate > 99.9% |
+| **Mobile App API** | Every 5 minutes | US, EU | < 250ms, success rate > 99% |
+
+**Implementation:**
+
+```typescript
+// Synthetic monitoring with Playwright
+import { chromium } from 'playwright';
+import { test, expect } from '@playwright/test';
+
+export async function syntheticUserLogin() {
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  
+  const startTime = Date.now();
+  
+  try {
+    // Navigate to login page
+    await page.goto('https://app.vorklee.com/login');
+    
+    // Fill credentials
+    await page.fill('[name="email"]', process.env.SYNTHETIC_USER_EMAIL);
+    await page.fill('[name="password"]', process.env.SYNTHETIC_USER_PASSWORD);
+    
+    // Submit
+    await page.click('button[type="submit"]');
+    
+    // Wait for dashboard
+    await page.waitForURL('**/dashboard', { timeout: 5000 });
+    
+    const duration = Date.now() - startTime;
+    
+    // Verify success
+    expect(duration).toBeLessThan(3000); // < 3 seconds
+    
+    // Report to monitoring
+    await reportSyntheticMetric('user_login', {
+      duration,
+      success: true,
+      location: process.env.SYNTHETIC_LOCATION || 'us',
+    });
+    
+  } catch (error) {
+    await reportSyntheticMetric('user_login', {
+      duration: Date.now() - startTime,
+      success: false,
+      error: error.message,
+      location: process.env.SYNTHETIC_LOCATION || 'us',
+    });
+    throw error;
+  } finally {
+    await browser.close();
+  }
+}
+```
+
+**Synthetic Monitoring Schedule (GitHub Actions):**
+
+```yaml
+# .github/workflows/synthetic-monitoring.yml
+name: Synthetic Monitoring
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  synthetic-tests:
+    strategy:
+      matrix:
+        location: [us-east-1, eu-west-1, ap-southeast-1]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm ci
+      - run: npm run test:synthetic
+        env:
+          SYNTHETIC_LOCATION: ${{ matrix.location }}
+      - name: Report failures
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "⚠️ Synthetic test failed",
+              "attachments": [{
+                "color": "warning",
+                "fields": [{
+                  "title": "Location",
+                  "value": "${{ matrix.location }}",
+                  "short": true
+                }]
+              }]
+            }
+```
+
+### Error Budget Dashboard & Freeze Policies
+
+**Error Budget Definition:**
+
+| Service | SLO | Monthly Error Budget | Alert Threshold |
+|---------|-----|---------------------|-----------------|
+| **API Availability** | 99.9% | 43.2 minutes downtime | > 50% consumed |
+| **API Latency P95** | < 250ms | 5% can exceed | > 50% consumed |
+| **Error Rate** | < 0.1% | 10 errors per 10k requests | > 50% consumed |
+
+**Error Budget Dashboard Implementation:**
+
+```typescript
+// Error budget tracking
+export class ErrorBudgetTracker {
+  async calculateErrorBudget() {
+    const currentTime = new Date();
+    const monthStart = new Date(currentTime.getFullYear(), currentTime.getMonth(), 1);
+    const monthEnd = new Date(currentTime.getFullYear(), currentTime.getMonth() + 1, 0);
+    const totalMinutes = (monthEnd.getTime() - monthStart.getTime()) / (1000 * 60);
+    
+    const downtimeMinutes = await this.getDowntimeMinutes(monthStart, currentTime);
+    const errorBudgetMinutes = totalMinutes * 0.001; // 0.1% of month
+    const consumed = (downtimeMinutes / errorBudgetMinutes) * 100;
+    
+    return {
+      total: errorBudgetMinutes,
+      consumed: downtimeMinutes,
+      remaining: errorBudgetMinutes - downtimeMinutes,
+      percentage: consumed,
+    };
+  }
+
+  async checkFreezePolicy() {
+    const budget = await this.calculateErrorBudget();
+    
+    if (budget.percentage > 90) {
+      // Freeze all deployments except critical fixes
+      await this.enableDeploymentFreeze({
+        reason: 'Error budget > 90% consumed',
+        allowed: ['hotfix', 'security-patch'],
+      });
+    } else if (budget.percentage > 75) {
+      // Require additional approvals
+      await this.enableDeploymentReview({
+        reason: 'Error budget > 75% consumed',
+        requiredApprovals: 2,
+      });
+    }
+  }
+}
+```
+
+**Error Budget Dashboard Metrics:**
+
+```typescript
+// Grafana dashboard queries
+// Error Budget Consumption
+sum(rate(http_requests_total{status=~"5.."}[5m])) 
+  / 
+sum(rate(http_requests_total[5m])) 
+  * 100 
+  as "Error Rate %"
+
+// Error Budget Remaining
+(43.2 - (uptime_downtime_minutes / 60)) 
+  as "Error Budget Remaining (hours)"
+
+// Alert when > 50% consumed
+(consumed_budget_percentage > 50) 
+  as "Error Budget Alert"
+```
+
+### Distributed Tracing Sampling
+
+**Sampling Strategy:**
+
+| Scenario | Sampling Rate | Rationale |
+|----------|--------------|-----------|
+| **Errors (5xx)** | 100% | Capture all errors for debugging |
+| **Slow Requests (>500ms)** | 100% | Performance optimization |
+| **Normal Success** | 10% | Cost optimization, representative sample |
+| **High Traffic (>1000 req/s)** | Adaptive (5-10%) | Reduce overhead during peak |
+| **Low Traffic (<100 req/s)** | Adaptive (50-100%) | More visibility when needed |
+
+**Adaptive Sampling Implementation:**
+
+```typescript
+// OpenTelemetry adaptive sampling
+import { TraceIdRatioBasedSampler, ParentBasedSampler } from '@opentelemetry/sdk-trace-base';
+
+export function createAdaptiveSampler() {
+  return new ParentBasedSampler({
+    root: new TraceIdRatioBasedSampler(0.1), // Default 10%
+    
+    // Override for errors
+    remoteParentSampled: (span) => {
+      const statusCode = span.attributes['http.status_code'];
+      if (statusCode >= 500) {
+        return true; // Sample all errors
+      }
+      
+      // Override for slow requests
+      const duration = span.duration;
+      if (duration > 500000000) { // > 500ms in nanoseconds
+        return true; // Sample all slow requests
+      }
+      
+      // Use parent decision or default 10%
+      return span.parentSpanId ? undefined : Math.random() < 0.1;
+    },
+  });
+}
+
+// Initialize tracing with adaptive sampler
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+
+const provider = new NodeTracerProvider({
+  sampler: createAdaptiveSampler(),
+});
+```
+
+**Sampling Configuration:**
+
+```yaml
+# OpenTelemetry configuration
+tracing:
+  sampling:
+    default_rate: 0.10 # 10%
+    error_rate: 1.0 # 100% errors
+    slow_request_threshold_ms: 500
+    adaptive:
+      enabled: true
+      high_traffic_threshold: 1000 # req/s
+      high_traffic_rate: 0.05 # 5%
+      low_traffic_threshold: 100 # req/s
+      low_traffic_rate: 0.50 # 50%
+```
+
+### Business Metrics Dashboard Template
+
+**Standard Business KPIs:**
+
+```typescript
+// Business metrics dashboard queries
+export const businessMetrics = {
+  // User Growth
+  newSignups: 'sum(increase(user_signups_total[24h]))',
+  activeUsers: 'sum(active_users{period="daily"})',
+  retentionRate: 'sum(returning_users) / sum(new_users) * 100',
+  
+  // Engagement
+  notesCreated: 'sum(increase(notes_created_total[24h]))',
+  apiCallsPerUser: 'sum(api_calls_total) / sum(active_users)',
+  sessionDuration: 'avg(session_duration_seconds)',
+  
+  // Revenue (if applicable)
+  mrr: 'sum(monthly_recurring_revenue)',
+  arr: 'sum(annual_recurring_revenue)',
+  churnRate: 'sum(churned_subscriptions) / sum(total_subscriptions) * 100',
+  
+  // Feature Usage
+  featureAdoption: 'sum(feature_usage{feature="ai-summary"}) / sum(active_users) * 100',
+};
+```
+
+**Grafana Dashboard Template:**
+
+```json
+{
+  "dashboard": {
+    "title": "Vorklee2 Business Metrics",
+    "panels": [
+      {
+        "title": "New Signups (24h)",
+        "targets": [{
+          "expr": "sum(increase(user_signups_total[24h]))"
+        }]
+      },
+      {
+        "title": "Active Users",
+        "targets": [{
+          "expr": "sum(active_users{period=\"daily\"})"
+        }]
+      },
+      {
+        "title": "Notes Created (24h)",
+        "targets": [{
+          "expr": "sum(increase(notes_created_total[24h]))"
+        }]
+      }
+    ]
+  }
+}
+```
+
+### Mobile App Performance Monitoring
+
+**Mobile-Specific Metrics:**
+
+| Metric | Target | Monitoring Tool |
+|--------|--------|-----------------|
+| **App Launch Time (Cold)** | < 2 seconds | Firebase Performance, Sentry |
+| **App Launch Time (Warm)** | < 500ms | Firebase Performance |
+| **API Response Time** | < 250ms P95 | New Relic, Datadog |
+| **Crash Rate** | < 0.1% | Sentry, Firebase Crashlytics |
+| **ANR Rate** | < 0.05% | Firebase Performance |
+| **Battery Usage** | < 5% per hour | Custom metrics |
+| **Network Failures** | < 1% | Custom metrics |
+| **Offline Sync Success** | > 99% | Custom metrics |
+
+**Mobile Performance Tracking:**
+
+```typescript
+// React Native performance monitoring
+import perf from '@react-native-firebase/perf';
+
+export async function trackAppLaunch() {
+  const trace = await perf().startTrace('app_launch');
+  
+  // App initialization
+  await initializeApp();
+  trace.putAttribute('launch_type', 'cold');
+  
+  // First screen render
+  await renderFirstScreen();
+  const duration = await trace.stop();
+  
+  // Report to analytics
+  await analytics.logEvent('app_launch', {
+    duration_ms: duration,
+    launch_type: 'cold',
+  });
+}
+
+// Network performance
+export async function trackAPICall(endpoint: string) {
+  const httpMetric = await perf().newHttpMetric(endpoint, 'GET');
+  
+  await httpMetric.start();
+  try {
+    const response = await fetch(endpoint);
+    httpMetric.setHttpResponseCode(response.status);
+    httpMetric.setResponseContentType(response.headers.get('content-type'));
+    await httpMetric.stop();
+  } catch (error) {
+    httpMetric.setHttpResponseCode(500);
+    await httpMetric.stop();
+    throw error;
+  }
+}
+```
+
+## 🧩 13. DevOps Observability Dashboard
 
 All metrics centralized in **Grafana** under `/vorklee-observability`.
 
@@ -744,10 +1922,13 @@ Dashboards include:
 - **Business Metrics**: User signups, notes created, API calls per org
 - **Security Metrics**: Failed auth attempts, rate limit hits, unusual activity
 - **CI/CD Metrics**: Build duration, deploy frequency, failure rate, MTTR
+- **Error Budget**: Consumption tracking with automatic freeze policies
+- **Log Storage Costs**: Hot/warm/cold storage monitoring
+- **Mobile Performance**: App launch time, crash rate, battery usage
 
 ---
 
-## 🔐 13. Certificate & Secret Management
+## 🔐 14. Certificate & Secret Management
 
 ### TLS Certificate Management
 
@@ -1008,7 +2189,21 @@ Use Neon Postgres with separate projects per service.
 
 The **Engineering & Security Guidelines** establish the foundation for safe, scalable, and compliant development in Vorklee2.
 
-**Key Enhancements:**
+**Key Enhancements in v5.3:**
+- **OWASP Top 10 2021 Mapping**: Comprehensive prevention strategies for all 10 critical risks with verification methods
+- **Security Headers**: Complete list with Next.js implementation examples (HSTS, CSP, X-Frame-Options, etc.)
+- **Vulnerability Disclosure Policy**: Responsible disclosure process with severity-based response times
+- **Penetration Testing**: Quarterly external, monthly internal, weekly automated scans
+- **Security Testing in CI/CD**: SAST, DAST, and secrets scanning with false-positive handling
+- **CSP Violation Reporting**: Automated detection and alerting for potential XSS attempts
+- **Mutation Testing**: Stryker integration for test quality validation (≥80% for critical paths)
+- **Contract Testing**: Pact-based API contract testing to prevent breaking changes
+- **Chaos Engineering**: Monthly/quarterly failure injection tests for resilience validation
+- **WCAG 2.1 AA Compliance**: Automated accessibility testing with pa11y and manual testing checklist
+- **Load Testing Schedule**: Weekly staging, monthly production with multiple scenarios (baseline, peak, stress, spike)
+- **Browser/Device Matrix**: Comprehensive testing matrix for web and mobile platforms
+
+**Previous Enhancements:**
 - **Enhanced CI/CD**: Multi-stage pipeline with security scanning, SBOM generation, and GPG verification
 - **Supply Chain Security**: Snyk, Trivy, TruffleHog integrated into every build
 - **SLO Targets**: 99.9% availability, P95 < 250ms, P99 < 500ms with error budget policy
@@ -1016,7 +2211,7 @@ The **Engineering & Security Guidelines** establish the foundation for safe, sca
 - **Incident Response**: 4-tier severity system with < 15min response for P0 incidents
 - **Observability**: Comprehensive Grafana dashboards with golden signals and business metrics
 
-By integrating DevSecOps, continuous audits, SLOs, and comprehensive observability, the platform ensures **trust, uptime, and data protection** at every layer.
+By integrating DevSecOps, continuous audits, SLOs, comprehensive observability, and industry-standard security controls (OWASP Top 10), the platform ensures **trust, uptime, and data protection** at every layer.
 
 ---
 
