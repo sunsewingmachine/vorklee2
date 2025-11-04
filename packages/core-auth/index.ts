@@ -1,8 +1,8 @@
-import jwt from 'jsonwebtoken';
+import jwt, { Secret } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecret-change-in-production';
+const JWT_SECRET: Secret = process.env.JWT_SECRET || 'supersecret-change-in-production';
 const COOKIE_NAME = 'vorklee2_session';
 
 export interface UserSession {
@@ -21,8 +21,8 @@ export interface SessionToken extends UserSession {
 /**
  * Generate JWT token for user session
  */
-export function generateToken(payload: UserSession, expiresIn: string = '7d'): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn });
+export function generateToken(payload: UserSession, expiresIn: string | number = '7d'): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn } as jwt.SignOptions);
 }
 
 /**

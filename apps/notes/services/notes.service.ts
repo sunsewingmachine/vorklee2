@@ -39,8 +39,8 @@ export async function getNotes(
 
   // Build query
   const query = includeArchived
-    ? eq(notes.organizationId, organizationId)
-    : and(eq(notes.organizationId, organizationId), eq(notes.isArchived, false));
+    ? eq(notes.orgId, organizationId)
+    : and(eq(notes.orgId, organizationId), eq(notes.isArchived, false));
 
   // Get total count
   const totalResult = await db
@@ -87,7 +87,7 @@ export async function getNoteById(noteId: string, organizationId: string) {
   const result = await db
     .select()
     .from(notes)
-    .where(and(eq(notes.id, noteId), eq(notes.organizationId, organizationId)))
+    .where(and(eq(notes.id, noteId), eq(notes.orgId, organizationId)))
     .limit(1);
 
   const note = result[0] || null;
@@ -112,8 +112,9 @@ export async function createNote(
     .insert(notes)
     .values({
       ...data,
-      organizationId,
-      createdBy: userId,
+      orgId: organizationId,
+      userId,
+      lastEditedBy: userId,
       updatedAt: new Date(),
     })
     .returning();
@@ -142,7 +143,7 @@ export async function updateNote(
       ...data,
       updatedAt: new Date(),
     })
-    .where(and(eq(notes.id, noteId), eq(notes.organizationId, organizationId)))
+    .where(and(eq(notes.id, noteId), eq(notes.orgId, organizationId)))
     .returning();
 
   const note = result[0] || null;
@@ -166,7 +167,7 @@ export async function deleteNote(noteId: string, organizationId: string) {
       isArchived: true,
       updatedAt: new Date(),
     })
-    .where(and(eq(notes.id, noteId), eq(notes.organizationId, organizationId)))
+    .where(and(eq(notes.id, noteId), eq(notes.orgId, organizationId)))
     .returning();
 
   const note = result[0] || null;
@@ -186,7 +187,7 @@ export async function deleteNote(noteId: string, organizationId: string) {
 export async function permanentlyDeleteNote(noteId: string, organizationId: string) {
   await db
     .delete(notes)
-    .where(and(eq(notes.id, noteId), eq(notes.organizationId, organizationId)));
+    .where(and(eq(notes.id, noteId), eq(notes.orgId, organizationId)));
 }
 
 /**
@@ -199,7 +200,7 @@ export async function restoreNote(noteId: string, organizationId: string) {
       isArchived: false,
       updatedAt: new Date(),
     })
-    .where(and(eq(notes.id, noteId), eq(notes.organizationId, organizationId)))
+    .where(and(eq(notes.id, noteId), eq(notes.orgId, organizationId)))
     .returning();
 
   return result[0] || null;
@@ -215,7 +216,7 @@ export async function getNotesByNotebook(notebookId: string, organizationId: str
     .where(
       and(
         eq(notes.notebookId, notebookId),
-        eq(notes.organizationId, organizationId),
+        eq(notes.orgId, organizationId),
         eq(notes.isArchived, false)
       )
     )

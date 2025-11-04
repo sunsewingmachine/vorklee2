@@ -39,8 +39,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build base query with full-text search
-    let baseQuery = db
+    // Build where conditions
+    const whereConditions = [
+      eq(notes.orgId, orgId),
+      eq(notes.isArchived, false),
+      // Basic text search in title and content
+      sql`(${notes.title} ILIKE ${'%' + query + '%'} OR ${notes.content} ILIKE ${'%' + query + '%'})`
+    ];
+
+    // Apply notebook filter
+    if (notebookIds && notebookIds.length > 0) {
+      whereConditions.push(
+        sql`${notes.notebookId} IN (${sql.raw(notebookIds.map(id => `'${id}'`).join(','))})`
+      );
+    }
+
+    // Apply date range filters
+    if (dateFrom) {
+      whereConditions.push(sql`${notes.createdAt} >= ${dateFrom}`);
+    }
+
+    if (dateTo) {
+      whereConditions.push(sql`${notes.createdAt} <= ${dateTo}`);
+    }
+
+    // Execute query with pagination
+    const offset = (page - 1) * limit;
+    const results = await db
       .select({
         id: notes.id,
         title: notes.title,
@@ -54,53 +79,11 @@ export async function GET(request: NextRequest) {
         lastEditedBy: notes.lastEditedBy,
         notebookId: notes.notebookId,
         notebookName: notebooks.name,
-        // Calculate relevance rank
-        rank: sql<number>`ts_rank(${notes.searchVector}, plainto_tsquery('english', ${query}))`,
       })
       .from(notes)
       .leftJoin(notebooks, eq(notes.notebookId, notebooks.id))
-      .where(
-        and(
-          eq(notes.orgId, orgId),
-          eq(notes.isArchived, false),
-          // Full-text search condition
-          sql`${notes.searchVector} @@ plainto_tsquery('english', ${query})`
-        )
-      );
-
-    // Apply notebook filter
-    if (notebookIds && notebookIds.length > 0) {
-      baseQuery = baseQuery.where(
-        and(
-          eq(notes.orgId, orgId),
-          sql`${notes.notebookId} IN (${sql.raw(notebookIds.map(id => `'${id}'`).join(','))})`
-        )
-      );
-    }
-
-    // Apply date range filters
-    if (dateFrom) {
-      baseQuery = baseQuery.where(
-        and(
-          eq(notes.orgId, orgId),
-          sql`${notes.createdAt} >= ${dateFrom}`
-        )
-      );
-    }
-
-    if (dateTo) {
-      baseQuery = baseQuery.where(
-        and(
-          eq(notes.orgId, orgId),
-          sql`${notes.createdAt} <= ${dateTo}`
-        )
-      );
-    }
-
-    // Execute query with pagination
-    const offset = (page - 1) * limit;
-    const results = await baseQuery
-      .orderBy(desc(sql`ts_rank(${notes.searchVector}, plainto_tsquery('english', ${query}))`), desc(notes.updatedAt))
+      .where(and(...whereConditions))
+      .orderBy(desc(notes.updatedAt))
       .limit(limit)
       .offset(offset);
 
@@ -112,7 +95,7 @@ export async function GET(request: NextRequest) {
         and(
           eq(notes.orgId, orgId),
           eq(notes.isArchived, false),
-          sql`${notes.searchVector} @@ plainto_tsquery('english', ${query})`
+          sql`(${notes.title} ILIKE ${'%' + query + '%'} OR ${notes.content} ILIKE ${'%' + query + '%'})`
         )
       );
 
@@ -134,7 +117,7 @@ export async function GET(request: NextRequest) {
     // For each result, fetch tags
     const resultsWithTags = await Promise.all(
       filteredResults.map(async (note) => {
-        const noteTags = await db
+        const noteTagsList = await db
           .select({
             id: tags.id,
             name: tags.name,
@@ -146,7 +129,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ...note,
-          tags: noteTags,
+          tags: noteTagsList,
           notebook: note.notebookId
             ? {
                 id: note.notebookId,

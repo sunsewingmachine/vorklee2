@@ -10,7 +10,7 @@ export async function getTags(organizationId: string) {
   return db
     .select()
     .from(tags)
-    .where(eq(tags.organizationId, organizationId))
+    .where(eq(tags.orgId, organizationId))
     .orderBy(asc(tags.name));
 }
 
@@ -21,7 +21,7 @@ export async function getTagById(tagId: string, organizationId: string) {
   const result = await db
     .select()
     .from(tags)
-    .where(and(eq(tags.id, tagId), eq(tags.organizationId, organizationId)))
+    .where(and(eq(tags.id, tagId), eq(tags.orgId, organizationId)))
     .limit(1);
 
   return result[0] || null;
@@ -35,7 +35,7 @@ export async function createTag(data: CreateTagInput, organizationId: string) {
     .insert(tags)
     .values({
       ...data,
-      organizationId,
+      orgId: organizationId,
     })
     .returning();
 
@@ -49,7 +49,7 @@ export async function updateTag(tagId: string, data: UpdateTagInput, organizatio
   const result = await db
     .update(tags)
     .set(data)
-    .where(and(eq(tags.id, tagId), eq(tags.organizationId, organizationId)))
+    .where(and(eq(tags.id, tagId), eq(tags.orgId, organizationId)))
     .returning();
 
   return result[0] || null;
@@ -59,7 +59,7 @@ export async function updateTag(tagId: string, data: UpdateTagInput, organizatio
  * Delete a tag
  */
 export async function deleteTag(tagId: string, organizationId: string) {
-  await db.delete(tags).where(and(eq(tags.id, tagId), eq(tags.organizationId, organizationId)));
+  await db.delete(tags).where(and(eq(tags.id, tagId), eq(tags.orgId, organizationId)));
 }
 
 

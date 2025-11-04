@@ -177,8 +177,8 @@ export const noteComments = pgTable('note_comments', {
   // Comment content
   content: text('content').notNull(),
 
-  // Threading
-  parentCommentId: uuid('parent_comment_id').references(() => noteComments.id, { onDelete: 'cascade' }),
+  // Threading (self-reference)
+  parentCommentId: uuid('parent_comment_id'),
 
   // Position in document (for inline comments)
   positionStart: integer('position_start'),

@@ -1,13 +1,12 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/db/db';
 import { noteComments, notes } from '@/db/schema';
-import { eq, and, isNull, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { getUserAuth } from '@vorklee2/core-auth';
 import { recordAudit, createAuditEvent } from '@vorklee2/core-audit';
 import { trackFeatureUsage } from '@vorklee2/core-analytics';
 import {
   successResponse,
-  successListResponse,
   errorResponse,
   createError,
 } from '@/lib/api-response';
@@ -40,14 +39,14 @@ const createCommentSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const skipAuth = process.env.SKIP_AUTH === 'true';
     const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
     const userId = skipAuth ? '00000000-0000-0000-0000-000000000002' : (await getUserAuth()).userId;
 
-    const noteId = params.id;
+    const { id: noteId } = await params;
 
     // Verify note exists and user has access (view or higher permission)
     const [note] = await db
@@ -91,7 +90,7 @@ export async function POST(
     }
 
     // Create comment
-    const [comment] = await db
+    const result = await db
       .insert(noteComments)
       .values({
         noteId,
@@ -101,7 +100,9 @@ export async function POST(
         positionStart: validatedData.positionStart,
         positionEnd: validatedData.positionEnd,
       })
-      .returning();
+      .returning() as unknown as typeof noteComments.$inferSelect[];
+
+    const comment = result[0];
 
     if (!skipAuth) {
       // Record audit event
@@ -140,13 +141,13 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const skipAuth = process.env.SKIP_AUTH === 'true';
     const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
 
-    const noteId = params.id;
+    const { id: noteId } = await params;
 
     // Verify note exists and user has access
     const [note] = await db
@@ -180,7 +181,7 @@ export async function GET(
       replies: replies.filter(r => r.parentCommentId === comment.id),
     }));
 
-    return successListResponse(threadedComments, request);
+    return successResponse(threadedComments, request);
   } catch (error) {
     return errorResponse(
       createError('INTERNAL_ERROR', `Failed to fetch comments: ${error instanceof Error ? error.message : 'Unknown error'}`),

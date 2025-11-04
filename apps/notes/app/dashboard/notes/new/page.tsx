@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -76,7 +76,7 @@ export default function NewNotePage() {
 
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       // Invalidate and refetch the notes query
       queryClient.invalidateQueries({ queryKey: ['notes'] });
       router.push('/dashboard');

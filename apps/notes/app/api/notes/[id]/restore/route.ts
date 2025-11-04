@@ -24,14 +24,14 @@ const restoreVersionSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const skipAuth = process.env.SKIP_AUTH === 'true';
     const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
     const userId = skipAuth ? '00000000-0000-0000-0000-000000000002' : (await getUserAuth()).userId;
 
-    const noteId = params.id;
+    const { id: noteId } = await params;
 
     // Verify note exists and user has access
     const [note] = await db
@@ -85,15 +85,15 @@ export async function POST(
     // Save current version before restoring
     await db.insert(noteVersions).values({
       noteId,
-      versionNumber: note.version,
+      versionNumber: note.version ?? 1,
       title: note.title,
-      content: note.content,
+      content: note.content ?? '',
       changedBy: note.lastEditedBy,
       changeSummary: `Auto-saved before restoring to version ${versionNumber}`,
     });
 
     // Restore the note to the selected version
-    const newVersionNumber = note.version + 1;
+    const newVersionNumber = (note.version ?? 0) + 1;
 
     const [updatedNote] = await db
       .update(notes)
@@ -112,7 +112,7 @@ export async function POST(
       noteId,
       versionNumber: newVersionNumber,
       title: versionToRestore.title,
-      content: versionToRestore.content,
+      content: versionToRestore.content ?? '',
       changedBy: userId,
       changeSummary: `Restored from version ${versionNumber}`,
     });

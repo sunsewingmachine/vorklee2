@@ -7,7 +7,6 @@ import { recordAudit, createAuditEvent } from '@vorklee2/core-audit';
 import { trackFeatureUsage } from '@vorklee2/core-analytics';
 import {
   successResponse,
-  successListResponse,
   errorResponse,
   createError,
 } from '@/lib/api-response';
@@ -34,14 +33,14 @@ const shareNoteSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const skipAuth = process.env.SKIP_AUTH === 'true';
     const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
     const userId = skipAuth ? '00000000-0000-0000-0000-000000000002' : (await getUserAuth()).userId;
 
-    const noteId = params.id;
+    const { id: noteId } = await params;
 
     // Verify note exists and user has permission
     const [note] = await db
@@ -101,8 +100,8 @@ export async function POST(
     if (!skipAuth) {
       // Record audit event
       await recordAudit(
-        createAuditEvent(orgId, userId, 'share', 'note', noteId, {
-          shareId: share.id,
+        createAuditEvent(orgId, userId, 'create', 'share', share.id, {
+          noteId,
           permission: share.permission,
           isPublicLink: share.isPublicLink,
         })
@@ -143,14 +142,13 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const skipAuth = process.env.SKIP_AUTH === 'true';
     const orgId = skipAuth ? '00000000-0000-0000-0000-000000000001' : (await getUserAuth()).orgId;
-    const userId = skipAuth ? '00000000-0000-0000-0000-000000000002' : (await getUserAuth()).userId;
 
-    const noteId = params.id;
+    const { id: noteId } = await params;
 
     // Verify note exists and user has access
     const [note] = await db
@@ -181,7 +179,7 @@ export async function GET(
         : undefined,
     }));
 
-    return successListResponse(sharesWithUrls, request);
+    return successResponse(sharesWithUrls, request);
   } catch (error) {
     return errorResponse(
       createError('INTERNAL_ERROR', `Failed to fetch shares: ${error instanceof Error ? error.message : 'Unknown error'}`),

@@ -10,7 +10,7 @@ export async function getNotebooks(organizationId: string) {
   return db
     .select()
     .from(notebooks)
-    .where(eq(notebooks.organizationId, organizationId))
+    .where(eq(notebooks.orgId, organizationId))
     .orderBy(asc(notebooks.name));
 }
 
@@ -21,7 +21,7 @@ export async function getNotebookById(notebookId: string, organizationId: string
   const result = await db
     .select()
     .from(notebooks)
-    .where(and(eq(notebooks.id, notebookId), eq(notebooks.organizationId, organizationId)))
+    .where(and(eq(notebooks.id, notebookId), eq(notebooks.orgId, organizationId)))
     .limit(1);
 
   return result[0] || null;
@@ -39,7 +39,7 @@ export async function createNotebook(
     .insert(notebooks)
     .values({
       ...data,
-      organizationId,
+      orgId: organizationId,
       createdBy: userId,
       updatedAt: new Date(),
     })
@@ -62,7 +62,7 @@ export async function updateNotebook(
       ...data,
       updatedAt: new Date(),
     })
-    .where(and(eq(notebooks.id, notebookId), eq(notebooks.organizationId, organizationId)))
+    .where(and(eq(notebooks.id, notebookId), eq(notebooks.orgId, organizationId)))
     .returning();
 
   return result[0] || null;
@@ -74,7 +74,7 @@ export async function updateNotebook(
 export async function deleteNotebook(notebookId: string, organizationId: string) {
   await db
     .delete(notebooks)
-    .where(and(eq(notebooks.id, notebookId), eq(notebooks.organizationId, organizationId)));
+    .where(and(eq(notebooks.id, notebookId), eq(notebooks.orgId, organizationId)));
 }
 
 
