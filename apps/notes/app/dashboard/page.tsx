@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
@@ -10,15 +11,13 @@ import {
   CardContent,
   CircularProgress,
   Alert,
-  Toolbar,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FolderIcon from '@mui/icons-material/Folder';
 import Link from 'next/link';
 import { NotesExplorer } from '@/components/explorer/NotesExplorer';
-import { ViewFilterBar, type ViewFilter } from '@/components/explorer/ViewFilterBar';
-import { ViewModeToggle, type ViewMode } from '@/components/explorer/ViewModeToggle';
 import { CreateNotebookDialog } from '@/components/notebooks/CreateNotebookDialog';
+import { useDashboard } from '@/contexts/DashboardContext';
 import type { NotebookWithChildren } from '@/services/notebooks.service';
 
 interface Note {
@@ -52,8 +51,7 @@ async function fetchNotebooksHierarchical(): Promise<NotebookWithChildren[]> {
 }
 
 export default function DashboardPage() {
-  const [viewFilter, setViewFilter] = useState<ViewFilter>('combined');
-  const [viewMode, setViewMode] = useState<ViewMode>('tree');
+  const { viewState, setOnCreateNotebook } = useDashboard();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createSubFolderParentId, setCreateSubFolderParentId] = useState<string | null>(null);
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | undefined>();
@@ -75,6 +73,14 @@ export default function DashboardPage() {
     setCreateSubFolderParentId(null);
     setCreateDialogOpen(true);
   };
+
+  // Register the handler with the context so it can be called from the AppBar
+  React.useEffect(() => {
+    setOnCreateNotebook(() => handleCreateNotebook);
+    return () => {
+      setOnCreateNotebook(null);
+    };
+  }, [setOnCreateNotebook]);
 
   const handleCreateSubFolder = (parentId: string) => {
     setCreateSubFolderParentId(parentId);
@@ -116,42 +122,6 @@ export default function DashboardPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          All Notes
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<FolderIcon />}
-            onClick={handleCreateNotebook}
-          >
-            New Notebook
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            component={Link}
-            href="/dashboard/notes/new"
-          >
-            New Note
-          </Button>
-        </Box>
-      </Box>
-
-      <Toolbar
-        variant="dense"
-        sx={{
-          px: 0,
-          minHeight: 48,
-          display: 'flex',
-          justifyContent: 'space-between',
-          mb: 2,
-        }}
-      >
-        <ViewFilterBar value={viewFilter} onChange={setViewFilter} />
-        <ViewModeToggle value={viewMode} onChange={setViewMode} />
-      </Toolbar>
 
       {!hasContent ? (
         <Card sx={{ textAlign: 'center', py: 8 }}>
@@ -185,8 +155,8 @@ export default function DashboardPage() {
         <NotesExplorer
           notebooks={notebooks || []}
           notes={notes || []}
-          viewFilter={viewFilter}
-          viewMode={viewMode}
+          viewFilter={viewState.filter}
+          viewMode={viewState.mode}
           onSelect={handleSelectNotebook}
           onEdit={handleEditNotebook}
           onDelete={handleDeleteNotebook}
