@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "allNotes": "所有笔记",
+    "notebooks": "笔记本",
+    "tags": "标签",
+    "search": "搜索",
+    "settings": "设置"
+  },
+  "notebooks": {
+    "menu": {
+      "title": "笔记本",
+      "dropdown": {
+        "label": "快速访问",
+        "empty": "没有可用的笔记本",
+        "createNew": "创建新笔记本",
+        "createSubFolder": "创建子文件夹",
+        "viewAll": "查看所有笔记本"
+      },
+      "actions": {
+        "open": "打开",
+        "edit": "编辑",
+        "delete": "删除",
+        "create": "创建笔记本",
+        "createSubFolder": "创建子文件夹",
+        "moveTo": "移动到",
+        "expand": "展开",
+        "collapse": "折叠"
+      },
+      "empty": {
+        "title": "还没有笔记本",
+        "description": "创建一个笔记本来整理您的笔记"
+      },
+      "hierarchy": {
+        "folder": "文件夹",
+        "subFolder": "子文件夹",
+        "nested": "嵌套",
+        "parent": "父文件夹"
+      }
+    }
+  }
+}
+

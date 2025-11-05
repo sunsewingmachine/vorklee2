@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "allNotes": "جميع الملاحظات",
+    "notebooks": "دفاتر الملاحظات",
+    "tags": "العلامات",
+    "search": "بحث",
+    "settings": "الإعدادات"
+  },
+  "notebooks": {
+    "menu": {
+      "title": "دفاتر الملاحظات",
+      "dropdown": {
+        "label": "وصول سريع",
+        "empty": "لا توجد دفاتر ملاحظات متاحة",
+        "createNew": "إنشاء دفتر ملاحظات جديد",
+        "createSubFolder": "إنشاء مجلد فرعي",
+        "viewAll": "عرض جميع دفاتر الملاحظات"
+      },
+      "actions": {
+        "open": "فتح",
+        "edit": "تعديل",
+        "delete": "حذف",
+        "create": "إنشاء دفتر ملاحظات",
+        "createSubFolder": "إنشاء مجلد فرعي",
+        "moveTo": "نقل إلى",
+        "expand": "توسيع",
+        "collapse": "طي"
+      },
+      "empty": {
+        "title": "لا توجد دفاتر ملاحظات بعد",
+        "description": "أنشئ دفتر ملاحظات لتنظيم ملاحظاتك"
+      },
+      "hierarchy": {
+        "folder": "مجلد",
+        "subFolder": "مجلد فرعي",
+        "nested": "متداخل",
+        "parent": "المجلد الرئيسي"
+      }
+    }
+  }
+}
+

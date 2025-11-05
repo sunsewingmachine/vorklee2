@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserAuth } from '@vorklee2/core-auth';
 import { checkSubscription } from '@vorklee2/core-billing';
 import { recordAudit, createAuditEvent } from '@vorklee2/core-audit';
-import { getNotebooks, createNotebook } from '@/services/notebooks.service';
+import { getNotebooks, getNotebooksHierarchical, createNotebook } from '@/services/notebooks.service';
 import { createNotebookSchema } from '@/lib/validations/notes';
 
 /**
  * GET /api/notebooks - Get all notebooks for the organization
+ * Query params:
+ *   - hierarchical: 'true' to return tree structure, 'false' for flat list (default: 'false')
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Development mode: use mock org ID
     const skipAuth = process.env.SKIP_AUTH === 'true';
@@ -19,10 +21,16 @@ export async function GET() {
       await checkSubscription(orgId, 'notes');
     }
 
-    // Fetch notebooks
-    const notebooksList = await getNotebooks(orgId);
+    // Check if hierarchical structure is requested
+    const searchParams = request.nextUrl.searchParams;
+    const hierarchical = searchParams.get('hierarchical') === 'true';
 
-    return NextResponse.json({ notebooks: notebooksList });
+    // Fetch notebooks
+    const notebooksList = hierarchical
+      ? await getNotebooksHierarchical(orgId)
+      : await getNotebooks(orgId);
+
+    return NextResponse.json({ data: notebooksList });
   } catch (error) {
     console.error('Get notebooks error:', error);
     return NextResponse.json(

@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 
 /**
  * Notebooks table - organize notes into collections
- * V5 Specification: Enhanced with icon, default flag, and archive support
+ * V5 Specification: Enhanced with icon, default flag, archive support, and hierarchical sub-folders
  */
 export const notebooks = pgTable('notebooks', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -13,6 +13,7 @@ export const notebooks = pgTable('notebooks', {
   description: text('description'),
   color: varchar('color', { length: 7 }), // Hex color #3B82F6
   icon: varchar('icon', { length: 50 }), // Icon identifier
+  parentId: uuid('parent_id'), // Self-referential for sub-folders (foreign key added via migration)
   isDefault: boolean('is_default').default(false),
   isArchived: boolean('is_archived').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -20,6 +21,7 @@ export const notebooks = pgTable('notebooks', {
 }, (table) => {
   return {
     orgIdIdx: index('idx_notebooks_org').on(table.orgId),
+    parentIdIdx: index('idx_notebooks_parent').on(table.parentId),
   };
 });
 

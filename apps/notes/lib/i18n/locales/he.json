@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "allNotes": "כל ההערות",
+    "notebooks": "מחברות",
+    "tags": "תגיות",
+    "search": "חיפוש",
+    "settings": "הגדרות"
+  },
+  "notebooks": {
+    "menu": {
+      "title": "מחברות",
+      "dropdown": {
+        "label": "גישה מהירה",
+        "empty": "אין מחברות זמינות",
+        "createNew": "צור מחברת חדשה",
+        "createSubFolder": "צור תיקיית משנה",
+        "viewAll": "הצג את כל המחברות"
+      },
+      "actions": {
+        "open": "פתח",
+        "edit": "ערוך",
+        "delete": "מחק",
+        "create": "צור מחברת",
+        "createSubFolder": "צור תיקיית משנה",
+        "moveTo": "העבר אל",
+        "expand": "הרחב",
+        "collapse": "כווץ"
+      },
+      "empty": {
+        "title": "עדיין אין מחברות",
+        "description": "צור מחברת כדי לארגן את ההערות שלך"
+      },
+      "hierarchy": {
+        "folder": "תיקייה",
+        "subFolder": "תיקיית משנה",
+        "nested": "מקונן",
+        "parent": "תיקיית אב"
+      }
+    }
+  }
+}
+

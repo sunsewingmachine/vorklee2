@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "allNotes": "Alle Notizen",
+    "notebooks": "Notizbücher",
+    "tags": "Tags",
+    "search": "Suchen",
+    "settings": "Einstellungen"
+  },
+  "notebooks": {
+    "menu": {
+      "title": "Notizbücher",
+      "dropdown": {
+        "label": "Schnellzugriff",
+        "empty": "Keine Notizbücher verfügbar",
+        "createNew": "Neues Notizbuch Erstellen",
+        "createSubFolder": "Unterordner Erstellen",
+        "viewAll": "Alle Notizbücher Anzeigen"
+      },
+      "actions": {
+        "open": "Öffnen",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "create": "Notizbuch Erstellen",
+        "createSubFolder": "Unterordner Erstellen",
+        "moveTo": "Verschieben Nach",
+        "expand": "Erweitern",
+        "collapse": "Zuklappen"
+      },
+      "empty": {
+        "title": "Noch keine Notizbücher",
+        "description": "Erstellen Sie ein Notizbuch, um Ihre Notizen zu organisieren"
+      },
+      "hierarchy": {
+        "folder": "Ordner",
+        "subFolder": "Unterordner",
+        "nested": "Verschachtelt",
+        "parent": "Übergeordneter Ordner"
+      }
+    }
+  }
+}
+

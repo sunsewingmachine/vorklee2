@@ -9,16 +9,10 @@ import FolderIcon from '@mui/icons-material/Folder';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import SearchIcon from '@mui/icons-material/Search';
 import SettingsIcon from '@mui/icons-material/Settings';
+import { useTranslation } from '@/components/i18n/useTranslation';
+import { NotebooksDropdown } from '@/components/notebooks/NotebooksDropdown';
 
 const drawerWidth = 240;
-
-const menuItems = [
-  { text: 'All Notes', icon: <NoteIcon />, href: '/dashboard' },
-  { text: 'Notebooks', icon: <FolderIcon />, href: '/dashboard/notebooks' },
-  { text: 'Tags', icon: <LocalOfferIcon />, href: '/dashboard/tags' },
-  { text: 'Search', icon: <SearchIcon />, href: '/dashboard/search' },
-  { text: 'Settings', icon: <SettingsIcon />, href: '/dashboard/settings' },
-];
 
 export default function DashboardLayout({
   children,
@@ -26,10 +20,19 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t, isRTL } = useTranslation();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
+
+  const menuItems = [
+    { text: t('nav.allNotes'), icon: <NoteIcon />, href: '/dashboard' },
+    { text: t('nav.notebooks'), icon: <FolderIcon />, href: '/dashboard/notebooks' },
+    { text: t('nav.tags'), icon: <LocalOfferIcon />, href: '/dashboard/tags' },
+    { text: t('nav.search'), icon: <SearchIcon />, href: '/dashboard/search' },
+    { text: t('nav.settings'), icon: <SettingsIcon />, href: '/dashboard/settings' },
+  ];
 
   const drawer = (
     <Box sx={{ 
@@ -57,7 +60,8 @@ export default function DashboardLayout({
                 color: '#e3f2fd',
                 '&:hover': {
                   bgcolor: 'rgba(25, 118, 210, 0.1)',
-                  borderLeft: '3px solid #1976d2',
+                  borderLeft: isRTL ? 'none' : '3px solid #1976d2',
+                  borderRight: isRTL ? '3px solid #1976d2' : 'none',
                 },
                 transition: 'all 0.2s ease',
               }}
@@ -72,13 +76,14 @@ export default function DashboardLayout({
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', direction: isRTL ? 'rtl' : 'ltr' }}>
       <AppBar
         position="fixed"
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          bgcolor: '#1976d2', // Blue color
+          ml: { sm: isRTL ? 0 : `${drawerWidth}px` },
+          mr: { sm: isRTL ? `${drawerWidth}px` : 0 },
+          bgcolor: '#1976d2',
         }}
       >
         <Toolbar>
@@ -86,13 +91,14 @@ export default function DashboardLayout({
             color="inherit"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+            sx={{ mr: isRTL ? 0 : 2, ml: isRTL ? 2 : 0, display: { sm: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
-            Notes Dashboard
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
+            {t('nav.notebooks')} Dashboard
           </Typography>
+          <NotebooksDropdown />
         </Toolbar>
       </AppBar>
       <Box

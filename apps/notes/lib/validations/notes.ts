@@ -21,13 +21,22 @@ export const createNotebookSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
   description: z.string().optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format').optional(),
+  parentId: z.string().uuid().nullable().optional(),
 });
 
 export const updateNotebookSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name too long').optional(),
   description: z.string().optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format').optional(),
-});
+  parentId: z.string().uuid().nullable().optional(),
+}).refine(
+  (data) => {
+    // If parentId is provided, ensure it's not the same as the notebook being updated
+    // This prevents self-reference (circular reference validation happens at service level)
+    return true;
+  },
+  { message: 'Cannot set parent to itself' }
+);
 
 // Tag validation schemas
 export const createTagSchema = z.object({

@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "allNotes": "All Notes",
+    "notebooks": "Notebooks",
+    "tags": "Tags",
+    "search": "Search",
+    "settings": "Settings"
+  },
+  "notebooks": {
+    "menu": {
+      "title": "Notebooks",
+      "dropdown": {
+        "label": "Quick Access",
+        "empty": "No notebooks available",
+        "createNew": "Create New Notebook",
+        "createSubFolder": "Create Sub-folder",
+        "viewAll": "View All Notebooks"
+      },
+      "actions": {
+        "open": "Open",
+        "edit": "Edit",
+        "delete": "Delete",
+        "create": "Create Notebook",
+        "createSubFolder": "Create Sub-folder",
+        "moveTo": "Move To",
+        "expand": "Expand",
+        "collapse": "Collapse"
+      },
+      "empty": {
+        "title": "No notebooks yet",
+        "description": "Create a notebook to organize your notes"
+      },
+      "hierarchy": {
+        "folder": "Folder",
+        "subFolder": "Sub-folder",
+        "nested": "Nested",
+        "parent": "Parent folder"
+      }
+    }
+  }
+}
+

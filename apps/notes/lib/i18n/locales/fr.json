@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "allNotes": "Toutes les Notes",
+    "notebooks": "Cahiers",
+    "tags": "Étiquettes",
+    "search": "Rechercher",
+    "settings": "Paramètres"
+  },
+  "notebooks": {
+    "menu": {
+      "title": "Cahiers",
+      "dropdown": {
+        "label": "Accès Rapide",
+        "empty": "Aucun cahier disponible",
+        "createNew": "Créer un Nouveau Cahier",
+        "createSubFolder": "Créer un Sous-dossier",
+        "viewAll": "Voir Tous les Cahiers"
+      },
+      "actions": {
+        "open": "Ouvrir",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "create": "Créer un Cahier",
+        "createSubFolder": "Créer un Sous-dossier",
+        "moveTo": "Déplacer Vers",
+        "expand": "Développer",
+        "collapse": "Réduire"
+      },
+      "empty": {
+        "title": "Aucun cahier pour le moment",
+        "description": "Créez un cahier pour organiser vos notes"
+      },
+      "hierarchy": {
+        "folder": "Dossier",
+        "subFolder": "Sous-dossier",
+        "nested": "Imbriqué",
+        "parent": "Dossier parent"
+      }
+    }
+  }
+}
+

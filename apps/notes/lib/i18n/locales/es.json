@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "allNotes": "Todas las Notas",
+    "notebooks": "Cuadernos",
+    "tags": "Etiquetas",
+    "search": "Buscar",
+    "settings": "Configuración"
+  },
+  "notebooks": {
+    "menu": {
+      "title": "Cuadernos",
+      "dropdown": {
+        "label": "Acceso Rápido",
+        "empty": "No hay cuadernos disponibles",
+        "createNew": "Crear Nuevo Cuaderno",
+        "createSubFolder": "Crear Subcarpeta",
+        "viewAll": "Ver Todos los Cuadernos"
+      },
+      "actions": {
+        "open": "Abrir",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "create": "Crear Cuaderno",
+        "createSubFolder": "Crear Subcarpeta",
+        "moveTo": "Mover A",
+        "expand": "Expandir",
+        "collapse": "Contraer"
+      },
+      "empty": {
+        "title": "Aún no hay cuadernos",
+        "description": "Crea un cuaderno para organizar tus notas"
+      },
+      "hierarchy": {
+        "folder": "Carpeta",
+        "subFolder": "Subcarpeta",
+        "nested": "Anidado",
+        "parent": "Carpeta principal"
+      }
+    }
+  }
+}
+

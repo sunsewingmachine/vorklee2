@@ -1,42 +1,69 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import {
   Box,
   Typography,
   Button,
   Card,
   CardContent,
-  CardActions,
-  Grid,
   CircularProgress,
   Alert,
+  List,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FolderIcon from '@mui/icons-material/Folder';
+import { useTranslation } from '@/components/i18n/useTranslation';
+import { NotebookTreeItem } from '@/components/notebooks/NotebookTreeItem';
+import { CreateNotebookDialog } from '@/components/notebooks/CreateNotebookDialog';
+import type { NotebookWithChildren } from '@/services/notebooks.service';
 
-interface Notebook {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string;
-  createdAt: string;
-}
-
-async function fetchNotebooks(): Promise<Notebook[]> {
-  const response = await fetch('/api/notebooks');
+async function fetchNotebooksHierarchical(): Promise<NotebookWithChildren[]> {
+  const response = await fetch('/api/notebooks?hierarchical=true');
   if (!response.ok) {
-    throw new Error('Failed to fetch notebooks');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch notebooks (${response.status})`);
   }
   const json = await response.json();
-  return json.data;
+  // Always return an array, even if data is undefined or null
+  return Array.isArray(json.data) ? json.data : [];
 }
 
 export default function NotebooksPage() {
+  const { t } = useTranslation();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createSubFolderParentId, setCreateSubFolderParentId] = useState<string | null>(null);
+  
   const { data: notebooks, isLoading, error } = useQuery({
-    queryKey: ['notebooks'],
-    queryFn: fetchNotebooks,
+    queryKey: ['notebooks', 'hierarchical'],
+    queryFn: fetchNotebooksHierarchical,
   });
+
+  const handleCreate = () => {
+    setCreateSubFolderParentId(null);
+    setCreateDialogOpen(true);
+  };
+
+  const handleSelect = (notebookId: string) => {
+    // TODO: Navigate to notebook detail page
+    console.log('Select notebook:', notebookId);
+  };
+
+  const handleEdit = (notebookId: string) => {
+    // TODO: Open edit notebook dialog
+    console.log('Edit notebook:', notebookId);
+  };
+
+  const handleDelete = (notebookId: string) => {
+    // TODO: Show delete confirmation dialog
+    console.log('Delete notebook:', notebookId);
+  };
+
+  const handleCreateSubFolder = (parentId: string) => {
+    setCreateSubFolderParentId(parentId);
+    setCreateDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -48,9 +75,25 @@ export default function NotebooksPage() {
 
   if (error) {
     return (
-      <Alert severity="error">
-        Failed to load notebooks: {error instanceof Error ? error.message : 'Unknown error'}
-      </Alert>
+      <Box>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error instanceof Error ? error.message : 'Failed to load notebooks'}
+        </Alert>
+        <Card sx={{ textAlign: 'center', py: 8 }}>
+          <CardContent>
+            <FolderIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              {t('notebooks.menu.empty.title')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              {t('notebooks.menu.empty.description')}
+            </Typography>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
+              {t('notebooks.menu.actions.create')}
+            </Button>
+          </CardContent>
+        </Card>
+      </Box>
     );
   }
 
@@ -58,10 +101,10 @@ export default function NotebooksPage() {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
-          Notebooks
+          {t('notebooks.menu.title')}
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />}>
-          New Notebook
+        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
+          {t('notebooks.menu.actions.create')}
         </Button>
       </Box>
 
@@ -70,41 +113,42 @@ export default function NotebooksPage() {
           <CardContent>
             <FolderIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
             <Typography variant="h6" color="text.secondary" gutterBottom>
-              No notebooks yet
+              {t('notebooks.menu.empty.title')}
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Create a notebook to organize your notes
+              {t('notebooks.menu.empty.description')}
             </Typography>
-            <Button variant="contained" startIcon={<AddIcon />}>
-              Create Notebook
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
+              {t('notebooks.menu.actions.create')}
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Grid container spacing={3}>
-          {notebooks?.map((notebook) => (
-            <Grid item xs={12} sm={6} md={4} key={notebook.id}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <FolderIcon sx={{ color: notebook.color, mr: 1 }} />
-                    <Typography variant="h6" component="h2">
-                      {notebook.name}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {notebook.description || 'No description'}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button size="small">Open</Button>
-                  <Button size="small">Edit</Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+        <Card>
+          <CardContent>
+            <List component="nav" aria-label={t('notebooks.menu.title')}>
+              {notebooks?.map((notebook) => (
+                <NotebookTreeItem
+                  key={notebook.id}
+                  notebook={notebook}
+                  level={0}
+                  onSelect={handleSelect}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onCreateSubFolder={handleCreateSubFolder}
+                />
+              ))}
+            </List>
+          </CardContent>
+        </Card>
       )}
+      
+      <CreateNotebookDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        parentId={createSubFolderParentId}
+        notebooks={notebooks || []}
+      />
     </Box>
   );
 }

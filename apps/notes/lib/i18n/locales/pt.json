@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "allNotes": "Todas as Notas",
+    "notebooks": "Cadernos",
+    "tags": "Tags",
+    "search": "Pesquisar",
+    "settings": "Configurações"
+  },
+  "notebooks": {
+    "menu": {
+      "title": "Cadernos",
+      "dropdown": {
+        "label": "Acesso Rápido",
+        "empty": "Nenhum caderno disponível",
+        "createNew": "Criar Novo Caderno",
+        "createSubFolder": "Criar Subpasta",
+        "viewAll": "Ver Todos os Cadernos"
+      },
+      "actions": {
+        "open": "Abrir",
+        "edit": "Editar",
+        "delete": "Excluir",
+        "create": "Criar Caderno",
+        "createSubFolder": "Criar Subpasta",
+        "moveTo": "Mover Para",
+        "expand": "Expandir",
+        "collapse": "Recolher"
+      },
+      "empty": {
+        "title": "Ainda não há cadernos",
+        "description": "Crie um caderno para organizar suas notas"
+      },
+      "hierarchy": {
+        "folder": "Pasta",
+        "subFolder": "Subpasta",
+        "nested": "Aninhado",
+        "parent": "Pasta pai"
+      }
+    }
+  }
+}
+

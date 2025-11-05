@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "allNotes": "すべてのノート",
+    "notebooks": "ノートブック",
+    "tags": "タグ",
+    "search": "検索",
+    "settings": "設定"
+  },
+  "notebooks": {
+    "menu": {
+      "title": "ノートブック",
+      "dropdown": {
+        "label": "クイックアクセス",
+        "empty": "利用可能なノートブックがありません",
+        "createNew": "新しいノートブックを作成",
+        "createSubFolder": "サブフォルダを作成",
+        "viewAll": "すべてのノートブックを表示"
+      },
+      "actions": {
+        "open": "開く",
+        "edit": "編集",
+        "delete": "削除",
+        "create": "ノートブックを作成",
+        "createSubFolder": "サブフォルダを作成",
+        "moveTo": "移動先",
+        "expand": "展開",
+        "collapse": "折りたたむ"
+      },
+      "empty": {
+        "title": "まだノートブックがありません",
+        "description": "ノートを整理するためにノートブックを作成してください"
+      },
+      "hierarchy": {
+        "folder": "フォルダ",
+        "subFolder": "サブフォルダ",
+        "nested": "ネスト",
+        "parent": "親フォルダ"
+      }
+    }
+  }
+}
+

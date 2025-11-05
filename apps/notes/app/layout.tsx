@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { QueryProvider } from '@/contexts/QueryProvider';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
+import { LocaleProvider } from '@/components/i18n/LocaleProvider';
 
 export const metadata: Metadata = {
   title: 'Notes App - Vorklee2',
@@ -13,11 +14,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <QueryProvider>
-          <ThemeProvider>{children}</ThemeProvider>
-        </QueryProvider>
+        <LocaleProvider>
+          <QueryProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </QueryProvider>
+        </LocaleProvider>
       </body>
     </html>
   );
