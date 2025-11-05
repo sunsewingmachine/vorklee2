@@ -49,7 +49,7 @@ The **Vorklee2 Enterprise Platform (V5.4)** represents **world-class SaaS archit
 **Zero Trust Architecture:**
 ```typescript
 // Never trust, always verify - every request evaluated
-✅ Risk-based adaptive authentication (0.0-1.0 risk score)
+✅ Risk-based adaptive. authentication (0.0-1.0 risk score)
 ✅ Device posture monitoring (every 4 hours)
 ✅ Continuous verification (no permanent trust)
 ✅ Micro-segmentation (service-to-service mTLS)
