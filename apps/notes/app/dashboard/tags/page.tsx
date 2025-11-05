@@ -25,8 +25,8 @@ async function fetchTags(): Promise<Tag[]> {
   if (!response.ok) {
     throw new Error('Failed to fetch tags');
   }
-  const data = await response.json();
-  return data.tags;
+  const json = await response.json();
+  return json.data;
 }
 
 export default function TagsPage() {

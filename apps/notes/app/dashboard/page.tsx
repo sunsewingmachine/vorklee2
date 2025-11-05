@@ -31,8 +31,8 @@ async function fetchNotes(): Promise<Note[]> {
   if (!response.ok) {
     throw new Error('Failed to fetch notes');
   }
-  const data = await response.json();
-  return data.notes;
+  const json = await response.json();
+  return json.data;
 }
 
 export default function DashboardPage() {

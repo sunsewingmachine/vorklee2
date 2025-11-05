@@ -38,8 +38,8 @@ async function fetchNotebooks(): Promise<Notebook[]> {
   if (!response.ok) {
     throw new Error('Failed to fetch notebooks');
   }
-  const data = await response.json();
-  return data.notebooks;
+  const json = await response.json();
+  return json.data;
 }
 
 export default function NewNotePage() {
@@ -71,7 +71,7 @@ export default function NewNotePage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create note');
+        throw new Error(error.error?.message || error.error || 'Failed to create note');
       }
 
       return response.json();

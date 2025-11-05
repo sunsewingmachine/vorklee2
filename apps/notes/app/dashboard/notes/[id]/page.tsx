@@ -56,8 +56,8 @@ async function fetchNote(id: string): Promise<Note> {
   if (!response.ok) {
     throw new Error('Failed to fetch note');
   }
-  const data = await response.json();
-  return data.note;
+  const json = await response.json();
+  return json.data;
 }
 
 async function fetchNotebooks(): Promise<Notebook[]> {
@@ -65,8 +65,8 @@ async function fetchNotebooks(): Promise<Notebook[]> {
   if (!response.ok) {
     throw new Error('Failed to fetch notebooks');
   }
-  const data = await response.json();
-  return data.notebooks;
+  const json = await response.json();
+  return json.data;
 }
 
 export default function NoteDetailPage() {
