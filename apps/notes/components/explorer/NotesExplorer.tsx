@@ -24,14 +24,29 @@ interface Note {
   }>;
 }
 
+interface Notebook {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  icon: string | null;
+  parentId: string | null;
+  isDefault: boolean;
+  isArchived: boolean;
+  createdAt: Date | string | null;
+  updatedAt: Date | string | null;
+}
+
 interface NotesExplorerProps {
   notes: Note[];
+  notebooks: Notebook[];
   viewFilter: ViewFilter;
   viewMode: ViewMode;
 }
 
 export function NotesExplorer({
   notes,
+  notebooks,
   viewFilter,
   viewMode,
 }: NotesExplorerProps) {
@@ -43,6 +58,7 @@ export function NotesExplorer({
             <CardContent sx={{ py: 1 }}>
               <ExplorerTreeView
                 notes={notes}
+                notebooks={notebooks}
                 viewFilter={viewFilter}
               />
             </CardContent>

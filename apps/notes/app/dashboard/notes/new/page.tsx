@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
@@ -21,18 +21,33 @@ import {
 } from '@mui/material';
 import { TagSelector } from '@/components/tags/TagSelector';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CancelIcon from '@mui/icons-material/Cancel';
+import SaveIcon from '@mui/icons-material/Save';
 
 export default function NewNotePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const notebookId = searchParams.get('notebookId') || undefined;
+  
   const [formData, setFormData] = useState({
     title: '',
     content: '',
     isPinned: false,
     tagIds: [] as string[],
+    notebookId: notebookId,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Update notebookId when search params change
+  useEffect(() => {
+    const notebookIdFromUrl = searchParams.get('notebookId') || undefined;
+    setFormData((prev) => ({
+      ...prev,
+      notebookId: notebookIdFromUrl,
+    }));
+  }, [searchParams]);
 
   // Create note mutation
   const createNoteMutation = useMutation({
@@ -98,6 +113,7 @@ export default function NewNotePage() {
       title: formData.title,
       content: formData.content || undefined,
       isPinned: formData.isPinned,
+      notebookId: formData.notebookId,
       tagIds: formData.tagIds.length > 0 ? formData.tagIds : undefined,
     };
 

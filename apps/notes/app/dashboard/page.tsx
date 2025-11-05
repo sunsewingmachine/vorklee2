@@ -31,6 +31,19 @@ interface Note {
   }>;
 }
 
+interface Notebook {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  icon: string | null;
+  parentId: string | null;
+  isDefault: boolean;
+  isArchived: boolean;
+  createdAt: string | Date | null;
+  updatedAt: string | Date | null;
+}
+
 async function fetchNotes(tagIds?: string[]): Promise<Note[]> {
   const url = tagIds && tagIds.length > 0
     ? `/api/notes?tagIds=${tagIds.join(',')}`
@@ -38,6 +51,15 @@ async function fetchNotes(tagIds?: string[]): Promise<Note[]> {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error('Failed to fetch notes');
+  }
+  const json = await response.json();
+  return json.data || [];
+}
+
+async function fetchNotebooks(): Promise<Notebook[]> {
+  const response = await fetch('/api/notebooks');
+  if (!response.ok) {
+    throw new Error('Failed to fetch notebooks');
   }
   const json = await response.json();
   return json.data || [];
@@ -51,8 +73,13 @@ export default function DashboardPage() {
     queryFn: () => fetchNotes(selectedTagIds.length > 0 ? selectedTagIds : undefined),
   });
 
-  const isLoading = notesLoading;
-  const error = notesError;
+  const { data: notebooks, isLoading: notebooksLoading, error: notebooksError } = useQuery({
+    queryKey: ['notebooks'],
+    queryFn: fetchNotebooks,
+  });
+
+  const isLoading = notesLoading || notebooksLoading;
+  const error = notesError || notebooksError;
 
   if (isLoading) {
     return (
@@ -70,7 +97,7 @@ export default function DashboardPage() {
     );
   }
 
-  const hasContent = notes && notes.length > 0;
+  const hasContent = (notes && notes.length > 0) || (notebooks && notebooks.length > 0);
 
   return (
     <Box>
@@ -98,6 +125,7 @@ export default function DashboardPage() {
       ) : (
         <NotesExplorer
           notes={notes || []}
+          notebooks={notebooks || []}
           viewFilter={viewState.filter}
           viewMode={viewState.mode}
         />
