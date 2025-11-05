@@ -103,6 +103,7 @@ function FolderItem({
   highlightedItemId,
   highlightedItemType,
   highlightedItemRef,
+  isLastChild = false,
 }: {
   node: TreeNode;
   level: number;
@@ -124,6 +125,7 @@ function FolderItem({
   highlightedItemId?: string | null;
   highlightedItemType?: 'note' | 'folder' | null;
   highlightedItemRef?: React.RefObject<HTMLDivElement>;
+  isLastChild?: boolean;
 }) {
   const isExpanded = expandedFolders.has(node.notebook.id);
   const hasChildren = node.children.length > 0 || node.notes.length > 0;
@@ -213,7 +215,33 @@ function FolderItem({
 
   return (
     <>
-      <ListItem disablePadding dense sx={{ py: 0.125 }} ref={itemRef}>
+      <ListItem
+        disablePadding
+        dense
+        sx={{
+          py: 0.125,
+          position: 'relative',
+          '&::before': level > 0 ? {
+            content: '""',
+            position: 'absolute',
+            left: 0.75 + (level - 1) * 1.5 + 0.5,
+            top: 0,
+            bottom: isLastChild ? '50%' : 0,
+            width: '1px',
+            bgcolor: 'divider',
+          } : {},
+          '&::after': level > 0 ? {
+            content: '""',
+            position: 'absolute',
+            left: 0.75 + (level - 1) * 1.5 + 0.5,
+            top: '50%',
+            width: '0.75rem',
+            height: '1px',
+            bgcolor: 'divider',
+          } : {},
+        }}
+        ref={itemRef}
+      >
         <ListItemButton
           onClick={handleClick}
           onContextMenu={handleContextMenu}
@@ -231,20 +259,20 @@ function FolderItem({
             minHeight: 28,
             pl: 0.75 + level * 1.5,
             opacity: isDragging ? 0.5 : 1,
-            bgcolor: isHighlighted 
-              ? 'primary.light' 
-              : isDragOver 
-                ? 'action.hover' 
+            bgcolor: isHighlighted
+              ? 'primary.light'
+              : isDragOver
+                ? 'action.hover'
                 : 'transparent',
-            border: isHighlighted 
-              ? '2px solid' 
-              : isDragOver 
-                ? '2px dashed' 
+            border: isHighlighted
+              ? '2px solid'
+              : isDragOver
+                ? '2px dashed'
                 : '2px solid transparent',
-            borderColor: isHighlighted 
-              ? 'primary.main' 
-              : isDragOver 
-                ? 'primary.main' 
+            borderColor: isHighlighted
+              ? 'primary.main'
+              : isDragOver
+                ? 'primary.main'
                 : 'transparent',
             cursor: isDragging ? 'grabbing' : 'grab',
             animation: isHighlighted ? 'pulse 2s ease-in-out 3' : 'none',
@@ -253,10 +281,10 @@ function FolderItem({
               '50%': { backgroundColor: 'primary.main', opacity: 0.7 },
             },
             '&:hover': {
-              bgcolor: isHighlighted 
-                ? 'primary.light' 
-                : isDragOver 
-                  ? 'action.hover' 
+              bgcolor: isHighlighted
+                ? 'primary.light'
+                : isDragOver
+                  ? 'action.hover'
                   : 'action.hover',
             },
           }}
@@ -336,12 +364,17 @@ function FolderItem({
       />
 
       <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-        <List component="div" disablePadding dense>
+        <List
+          component="div"
+          disablePadding
+          dense
+        >
           {/* Render child folders */}
-          {node.children.map((child) => {
+          {node.children.map((child, index) => {
             const childRef = highlightedItemId === child.notebook.id && highlightedItemType === 'folder'
               ? highlightedItemRef
               : undefined;
+            const isLast = index === node.children.length - 1 && (!shouldShowNotes || node.notes.length === 0);
             return (
               <FolderItem
                 key={child.notebook.id}
@@ -365,16 +398,18 @@ function FolderItem({
                 highlightedItemId={highlightedItemId}
                 highlightedItemType={highlightedItemType}
                 highlightedItemRef={highlightedItemRef}
+                isLastChild={isLast}
               />
             );
           })}
 
           {/* Render notes in this folder */}
           {shouldShowNotes &&
-            node.notes.map((note) => {
-              const noteRef = highlightedItemId === note.id && highlightedItemType === 'note' 
-                ? highlightedItemRef 
+            node.notes.map((note, index) => {
+              const noteRef = highlightedItemId === note.id && highlightedItemType === 'note'
+                ? highlightedItemRef
                 : undefined;
+              const isLast = index === node.notes.length - 1;
               return (
                 <NoteItem
                   key={note.id}
@@ -390,6 +425,7 @@ function FolderItem({
                   onDragEnd={onDragEnd}
                   isHighlighted={highlightedItemId === note.id && highlightedItemType === 'note'}
                   itemRef={noteRef}
+                  isLastChild={isLast}
                 />
               );
             })}
@@ -412,6 +448,7 @@ function NoteItem({
   onDragEnd,
   isHighlighted,
   itemRef,
+  isLastChild = false,
 }: {
   note: Note;
   level: number;
@@ -425,6 +462,7 @@ function NoteItem({
   onDragEnd?: () => void;
   isHighlighted?: boolean;
   itemRef?: React.RefObject<HTMLDivElement>;
+  isLastChild?: boolean;
 }) {
   const [contextMenuAnchor, setContextMenuAnchor] = useState<HTMLElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -476,7 +514,33 @@ function NoteItem({
 
   return (
     <>
-      <ListItem disablePadding dense sx={{ py: 0.125 }} ref={itemRef}>
+      <ListItem
+        disablePadding
+        dense
+        sx={{
+          py: 0.125,
+          position: 'relative',
+          '&::before': level > 0 ? {
+            content: '""',
+            position: 'absolute',
+            left: 0.75 + (level - 1) * 1.5 + 0.5,
+            top: 0,
+            bottom: isLastChild ? '50%' : 0,
+            width: '1px',
+            bgcolor: 'divider',
+          } : {},
+          '&::after': level > 0 ? {
+            content: '""',
+            position: 'absolute',
+            left: 0.75 + (level - 1) * 1.5 + 0.5,
+            top: '50%',
+            width: '0.75rem',
+            height: '1px',
+            bgcolor: 'divider',
+          } : {},
+        }}
+        ref={itemRef}
+      >
         <ListItemButton
           component={Link}
           href={`/dashboard/notes/${note.id}`}
@@ -971,10 +1035,11 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
       >
         {/* Render folders */}
         {shouldShowFolders &&
-          tree.map((node) => {
+          tree.map((node, index) => {
             const folderRef = highlightedItemId === node.notebook.id && highlightedItemType === 'folder'
               ? highlightedItemRef
               : undefined;
+            const isLast = index === tree.length - 1 && (!shouldShowNotes || rootNotes.length === 0);
             return (
               <FolderItem
                 key={node.notebook.id}
@@ -998,16 +1063,18 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
                 highlightedItemId={highlightedItemId}
                 highlightedItemType={highlightedItemType}
                 highlightedItemRef={highlightedItemRef}
+                isLastChild={isLast}
               />
             );
           })}
 
         {/* Render notes without folders */}
         {shouldShowNotes &&
-          rootNotes.map((note) => {
+          rootNotes.map((note, index) => {
             const noteRef = highlightedItemId === note.id && highlightedItemType === 'note'
               ? highlightedItemRef
               : undefined;
+            const isLast = index === rootNotes.length - 1;
             return (
               <NoteItem
                 key={note.id}
@@ -1023,6 +1090,7 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
                 onDragEnd={handleGlobalDragEnd}
                 isHighlighted={highlightedItemId === note.id && highlightedItemType === 'note'}
                 itemRef={noteRef}
+                isLastChild={isLast}
               />
             );
           })}
