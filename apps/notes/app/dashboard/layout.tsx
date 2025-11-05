@@ -5,7 +5,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import MenuIcon from '@mui/icons-material/Menu';
 import NoteIcon from '@mui/icons-material/Note';
-import FolderIcon from '@mui/icons-material/Folder';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import SearchIcon from '@mui/icons-material/Search';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -28,7 +27,6 @@ export default function DashboardLayout({
 
   const menuItems = [
     { text: t('nav.allNotes'), icon: <NoteIcon />, href: '/dashboard' },
-    { text: t('nav.notebooks'), icon: <FolderIcon />, href: '/dashboard/notebooks' },
     { text: t('nav.tags'), icon: <LocalOfferIcon />, href: '/dashboard/tags' },
     { text: t('nav.search'), icon: <SearchIcon />, href: '/dashboard/search' },
     { text: t('nav.settings'), icon: <SettingsIcon />, href: '/dashboard/settings' },
