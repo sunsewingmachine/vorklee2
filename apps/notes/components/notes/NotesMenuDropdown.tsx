@@ -33,7 +33,10 @@ export const NotesMenuDropdown = memo(function NotesMenuDropdown() {
 
   const handleNavigate = (path: string) => {
     handleClose();
-    router.push(path);
+    // Prevent navigation if already on the target path to avoid unnecessary re-renders
+    if (pathname !== path) {
+      router.push(path);
+    }
   };
 
   const isActive = (path: string) => {

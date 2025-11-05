@@ -335,34 +335,34 @@ function UnifiedDashboardLayoutInner({
 
   // Hide top bar when showing external content (iframe) - let the embedded app show its own top bar
   const isExternalView = currentView.startsWith('http');
-  
+
   return (
     <Box sx={{ display: 'flex' }}>
-      {!isExternalView && (
-        <AppBar
-          position="fixed"
-          sx={{
-            width: { sm: `calc(100% - ${drawerWidth}px)` },
-            ml: { sm: `${drawerWidth}px` },
-            bgcolor: '#1976d2',
-            zIndex: (theme) => theme.zIndex.drawer + 1,
-          }}
-        >
-          <Toolbar>
-            <IconButton
-              color="inherit"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2, display: { sm: 'none' } }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
-              Vorklee2 Platform
-            </Typography>
-          </Toolbar>
-        </AppBar>
-      )}
+      {/* Always render AppBar - use CSS to hide/show, never unmounts */}
+      <AppBar
+        position="fixed"
+        sx={{
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          ml: { sm: `${drawerWidth}px` },
+          bgcolor: '#1976d2',
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          display: isExternalView ? 'none' : 'block', // Hide with CSS instead of unmounting
+        }}
+      >
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2, display: { sm: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
+            Vorklee2 Platform
+          </Typography>
+        </Toolbar>
+      </AppBar>
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
