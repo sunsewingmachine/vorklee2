@@ -809,9 +809,19 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
       }
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notes'] });
-      queryClient.invalidateQueries({ queryKey: ['notebooks'] });
+    onSuccess: async (data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['notes'] });
+      await queryClient.invalidateQueries({ queryKey: ['notebooks'] });
+
+      // Expand parent folder if note was moved to a folder
+      if (variables.notebookId) {
+        const ancestorIds = getAncestorFolderIds(variables.notebookId, notebooks);
+        const foldersToExpand = [variables.notebookId, ...ancestorIds];
+        window.dispatchEvent(new CustomEvent('expand-folders', { detail: { folderIds: foldersToExpand } }));
+      }
+
+      // Navigate with highlight
+      router.push(`/dashboard?highlight=${variables.id}&highlightType=note`);
     },
   });
 
@@ -828,9 +838,19 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
       }
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notebooks'] });
-      queryClient.invalidateQueries({ queryKey: ['notes'] });
+    onSuccess: async (data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['notebooks'] });
+      await queryClient.invalidateQueries({ queryKey: ['notes'] });
+
+      // Expand parent folder if folder was moved to another folder
+      if (variables.parentId) {
+        const ancestorIds = getAncestorFolderIds(variables.parentId, notebooks);
+        const foldersToExpand = [variables.parentId, ...ancestorIds];
+        window.dispatchEvent(new CustomEvent('expand-folders', { detail: { folderIds: foldersToExpand } }));
+      }
+
+      // Navigate with highlight
+      router.push(`/dashboard?highlight=${variables.id}&highlightType=folder`);
     },
   });
 
