@@ -5,7 +5,6 @@ import { useState, createContext, useContext } from 'react';
 import MenuIcon from '@mui/icons-material/Menu';
 import NoteIcon from '@mui/icons-material/Note';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
-import SearchIcon from '@mui/icons-material/Search';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -46,7 +45,6 @@ const appMenus: Record<string, AppMenu> = {
     mainHref: `${NOTES_APP_URL}/dashboard`,
     items: [
       { text: 'Tags', icon: <LocalOfferIcon />, href: `${NOTES_APP_URL}/dashboard/tags`, isExternal: true },
-      { text: 'Search', icon: <SearchIcon />, href: `${NOTES_APP_URL}/dashboard/search`, isExternal: true },
     ],
   },
   attendance: {
