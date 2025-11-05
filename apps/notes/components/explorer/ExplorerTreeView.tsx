@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { ContextMenu } from './ContextMenu';
+import { CreateFolderDialog } from '@/components/notebooks/CreateFolderDialog';
 import type { ViewFilter } from './ViewFilterBar';
 
 interface Note {
@@ -88,6 +89,7 @@ function FolderItem({
   onRename,
   onDelete,
   onAddTask,
+  onCreateSubfolder,
   onDragOver,
   onDrop,
   dragOverFolderId,
@@ -103,6 +105,7 @@ function FolderItem({
   onRename?: (id: string, newName: string) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
   onAddTask?: (notebookId: string) => void;
+  onCreateSubfolder?: (parentId: string) => void;
   onDragOver?: (e: React.DragEvent, folderId: string) => void;
   onDrop?: (e: React.DragEvent, targetFolderId: string) => void;
   dragOverFolderId?: string | null;
@@ -143,6 +146,12 @@ function FolderItem({
   const handleAddTask = () => {
     if (onAddTask) {
       onAddTask(node.notebook.id);
+    }
+  };
+
+  const handleCreateSubfolder = () => {
+    if (onCreateSubfolder) {
+      onCreateSubfolder(node.notebook.id);
     }
   };
 
@@ -276,6 +285,7 @@ function FolderItem({
         onRename={onRename ? handleRename : undefined}
         onDelete={onDelete ? handleDelete : undefined}
         onAddTask={onAddTask ? handleAddTask : undefined}
+        onCreateSubfolder={onCreateSubfolder ? handleCreateSubfolder : undefined}
       />
 
       <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -292,6 +302,7 @@ function FolderItem({
               onRename={onRename}
               onDelete={onDelete}
               onAddTask={onAddTask}
+              onCreateSubfolder={onCreateSubfolder}
               onDragOver={onDragOver}
               onDrop={onDrop}
               dragOverFolderId={dragOverFolderId}
@@ -503,6 +514,8 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter }: ExplorerTreeV
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<{ type: 'note' | 'folder'; id: string } | null>(null);
+  const [createSubfolderDialogOpen, setCreateSubfolderDialogOpen] = useState(false);
+  const [subfolderParentId, setSubfolderParentId] = useState<string | null>(null);
   const shouldShowFolders = viewFilter === 'folders' || viewFilter === 'combined';
   const shouldShowNotes = viewFilter === 'tasks' || viewFilter === 'combined';
   const queryClient = useQueryClient();
@@ -572,6 +585,11 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter }: ExplorerTreeV
 
   const handleAddTask = (notebookId: string) => {
     router.push(`/dashboard/notes/new?notebookId=${notebookId}`);
+  };
+
+  const handleCreateSubfolder = (parentId: string) => {
+    setSubfolderParentId(parentId);
+    setCreateSubfolderDialogOpen(true);
   };
 
   // Mutations for notes
@@ -757,52 +775,63 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter }: ExplorerTreeV
   }
 
   return (
-    <List 
-      component="nav" 
-      dense 
-      sx={{ py: 0 }}
-      onDragOver={handleRootDragOver}
-      onDrop={handleRootDrop}
-    >
-      {/* Render folders */}
-      {shouldShowFolders &&
-        tree.map((node) => (
-          <FolderItem
-            key={node.notebook.id}
-            node={node}
-            level={0}
-            expandedFolders={expandedFolders}
-            onToggleFolder={handleToggleFolder}
-            viewFilter={viewFilter}
-            onRename={handleRenameNotebook}
-            onDelete={handleDeleteNotebook}
-            onAddTask={handleAddTask}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            dragOverFolderId={dragOverFolderId}
-            allNotebooks={notebooks}
-            onDragStart={(data) => setDraggedItem(data)}
-            onDragEnd={handleGlobalDragEnd}
-          />
-        ))}
+    <>
+      <List 
+        component="nav" 
+        dense 
+        sx={{ py: 0 }}
+        onDragOver={handleRootDragOver}
+        onDrop={handleRootDrop}
+      >
+        {/* Render folders */}
+        {shouldShowFolders &&
+          tree.map((node) => (
+            <FolderItem
+              key={node.notebook.id}
+              node={node}
+              level={0}
+              expandedFolders={expandedFolders}
+              onToggleFolder={handleToggleFolder}
+              viewFilter={viewFilter}
+              onRename={handleRenameNotebook}
+              onDelete={handleDeleteNotebook}
+              onAddTask={handleAddTask}
+              onCreateSubfolder={handleCreateSubfolder}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              dragOverFolderId={dragOverFolderId}
+              allNotebooks={notebooks}
+              onDragStart={(data) => setDraggedItem(data)}
+              onDragEnd={handleGlobalDragEnd}
+            />
+          ))}
 
-      {/* Render notes without folders */}
-      {shouldShowNotes &&
-        rootNotes.map((note) => (
-          <NoteItem
-            key={note.id}
-            note={note}
-            level={0}
-            onRename={handleRenameNote}
-            onDelete={handleDeleteNote}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            dragOverFolderId={dragOverFolderId}
-            allNotebooks={notebooks}
-            onDragStart={(data) => setDraggedItem(data)}
-            onDragEnd={handleGlobalDragEnd}
-          />
-        ))}
-    </List>
+        {/* Render notes without folders */}
+        {shouldShowNotes &&
+          rootNotes.map((note) => (
+            <NoteItem
+              key={note.id}
+              note={note}
+              level={0}
+              onRename={handleRenameNote}
+              onDelete={handleDeleteNote}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              dragOverFolderId={dragOverFolderId}
+              allNotebooks={notebooks}
+              onDragStart={(data) => setDraggedItem(data)}
+              onDragEnd={handleGlobalDragEnd}
+            />
+          ))}
+      </List>
+      <CreateFolderDialog
+        open={createSubfolderDialogOpen}
+        onClose={() => {
+          setCreateSubfolderDialogOpen(false);
+          setSubfolderParentId(null);
+        }}
+        parentId={subfolderParentId}
+      />
+    </>
   );
 }

@@ -23,9 +23,10 @@ import FolderIcon from '@mui/icons-material/Folder';
 interface CreateFolderDialogProps {
   open: boolean;
   onClose: () => void;
+  parentId?: string | null; // Optional parent folder ID for creating subfolders
 }
 
-export function CreateFolderDialog({ open, onClose }: CreateFolderDialogProps) {
+export function CreateFolderDialog({ open, onClose, parentId }: CreateFolderDialogProps) {
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
@@ -67,7 +68,7 @@ export function CreateFolderDialog({ open, onClose }: CreateFolderDialogProps) {
   }, [open]);
 
   const createFolderMutation = useMutation({
-    mutationFn: async (data: { name: string; description?: string; color?: string }) => {
+    mutationFn: async (data: { name: string; description?: string; color?: string; parentId?: string | null }) => {
       const response = await fetch('/api/notebooks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,6 +76,7 @@ export function CreateFolderDialog({ open, onClose }: CreateFolderDialogProps) {
           name: data.name,
           description: data.description || undefined,
           color: data.color || undefined,
+          parentId: data.parentId || undefined,
         }),
       });
 
@@ -141,6 +143,7 @@ export function CreateFolderDialog({ open, onClose }: CreateFolderDialogProps) {
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
       color: formData.color || undefined,
+      parentId: parentId || undefined,
     });
   };
 
@@ -150,7 +153,7 @@ export function CreateFolderDialog({ open, onClose }: CreateFolderDialogProps) {
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <FolderIcon />
-            New Folder
+            {parentId ? 'New Subfolder' : 'New Folder'}
           </Box>
         </DialogTitle>
         <DialogContent>

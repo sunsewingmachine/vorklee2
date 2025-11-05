@@ -18,6 +18,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import AddTaskIcon from '@mui/icons-material/AddTask';
+import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import CloseIcon from '@mui/icons-material/Close';
 import { useRouter } from 'next/navigation';
 
@@ -32,6 +33,7 @@ interface ContextMenuProps {
   onDelete?: () => Promise<void>;
   onAddTask?: () => void;
   onEdit?: () => void;
+  onCreateSubfolder?: () => void;
 }
 
 export function ContextMenu({
@@ -45,6 +47,7 @@ export function ContextMenu({
   onDelete,
   onAddTask,
   onEdit,
+  onCreateSubfolder,
 }: ContextMenuProps) {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(itemName);
@@ -69,6 +72,13 @@ export function ContextMenu({
   const handleAddTaskClick = () => {
     if (onAddTask) {
       onAddTask();
+    }
+    onClose();
+  };
+
+  const handleCreateSubfolderClick = () => {
+    if (onCreateSubfolder) {
+      onCreateSubfolder();
     }
     onClose();
   };
@@ -113,6 +123,13 @@ export function ContextMenu({
   const menuItems = [];
 
   if (type === 'folder') {
+    if (onCreateSubfolder) {
+      menuItems.push({
+        label: 'Create Subfolder',
+        icon: <CreateNewFolderIcon fontSize="small" />,
+        onClick: handleCreateSubfolderClick,
+      });
+    }
     if (onAddTask) {
       menuItems.push({
         label: 'Add Task',
