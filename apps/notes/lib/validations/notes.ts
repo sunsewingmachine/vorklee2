@@ -29,8 +29,28 @@ export const updateTagSchema = z.object({
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format').optional(),
 });
 
+// Notebook validation schemas
+export const createNotebookSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+  description: z.string().max(500, 'Description too long').optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format').optional(),
+  icon: z.string().max(50, 'Icon identifier too long').optional(),
+  parentId: z.string().uuid().optional(),
+});
+
+export const updateNotebookSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name too long').optional(),
+  description: z.string().max(500, 'Description too long').optional().nullable(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format').optional(),
+  icon: z.string().max(50, 'Icon identifier too long').optional(),
+  parentId: z.string().uuid().nullable().optional(),
+  isArchived: z.boolean().optional(),
+});
+
 // Type exports
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
 export type CreateTagInput = z.infer<typeof createTagSchema>;
 export type UpdateTagInput = z.infer<typeof updateTagSchema>;
+export type CreateNotebookInput = z.infer<typeof createNotebookSchema>;
+export type UpdateNotebookInput = z.infer<typeof updateNotebookSchema>;

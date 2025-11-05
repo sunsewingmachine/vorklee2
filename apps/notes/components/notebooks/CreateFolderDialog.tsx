@@ -18,19 +18,24 @@ import {
   Typography,
   CircularProgress,
 } from '@mui/material';
-import { useTranslation } from '@/components/i18n/useTranslation';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import FolderIcon from '@mui/icons-material/Folder';
 
-interface CreateTagDialogProps {
+interface CreateFolderDialogProps {
   open: boolean;
   onClose: () => void;
 }
 
-export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
-  const { t } = useTranslation();
+export function CreateFolderDialog({ open, onClose }: CreateFolderDialogProps) {
   const queryClient = useQueryClient();
   
-  // Predefined color options - ordered by relevance (main colors first, then shades)
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    color: '#1976d2',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Predefined color options
   const colorOptions = [
     { value: '#1976d2', label: 'Blue' },
     { value: '#0288d1', label: 'Light Blue' },
@@ -49,49 +54,45 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
     { value: '#ffffff', label: 'White' },
   ];
 
-  const [formData, setFormData] = useState({
-    name: '',
-    color: '#1976d2',
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
   // Reset form when dialog opens/closes
   useEffect(() => {
     if (open) {
       setFormData({
         name: '',
+        description: '',
         color: '#1976d2',
       });
       setErrors({});
     }
   }, [open]);
 
-  const createTagMutation = useMutation({
-    mutationFn: async (data: { name: string; color?: string }) => {
-      const response = await fetch('/api/tags', {
+  const createFolderMutation = useMutation({
+    mutationFn: async (data: { name: string; description?: string; color?: string }) => {
+      const response = await fetch('/api/notebooks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
+          description: data.description || undefined,
           color: data.color || undefined,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create tag');
+        throw new Error(error.error || 'Failed to create folder');
       }
 
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate and refetch tags
-      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      // Invalidate and refetch notebooks
+      queryClient.invalidateQueries({ queryKey: ['notebooks'] });
       handleClose();
     },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -111,10 +112,11 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
   const handleClose = () => {
     setFormData({
       name: '',
+      description: '',
       color: '#1976d2',
     });
     setErrors({});
-    createTagMutation.reset();
+    createFolderMutation.reset();
     onClose();
   };
 
@@ -124,10 +126,10 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
     // Validation
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) {
-      newErrors.name = 'Tag name is required';
+      newErrors.name = 'Folder name is required';
     }
-    if (formData.name.trim().length > 50) {
-      newErrors.name = 'Tag name must be 50 characters or less';
+    if (formData.name.trim().length > 100) {
+      newErrors.name = 'Folder name must be 100 characters or less';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -135,8 +137,9 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
       return;
     }
 
-    createTagMutation.mutate({
+    createFolderMutation.mutate({
       name: formData.name.trim(),
+      description: formData.description.trim() || undefined,
       color: formData.color || undefined,
     });
   };
@@ -146,22 +149,22 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
       <form onSubmit={handleSubmit}>
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <LocalOfferIcon />
-            New Tag
+            <FolderIcon />
+            New Folder
           </Box>
         </DialogTitle>
         <DialogContent>
-          {createTagMutation.error && (
+          {createFolderMutation.error && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {createTagMutation.error instanceof Error
-                ? createTagMutation.error.message
-                : 'Failed to create tag'}
+              {createFolderMutation.error instanceof Error
+                ? createFolderMutation.error.message
+                : 'Failed to create folder'}
             </Alert>
           )}
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
-              label="Tag Name"
+              label="Folder Name"
               name="name"
               required
               fullWidth
@@ -170,7 +173,18 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
               error={!!errors.name}
               helperText={errors.name}
               autoFocus
-              inputProps={{ maxLength: 50 }}
+              inputProps={{ maxLength: 100 }}
+            />
+
+            <TextField
+              label="Description"
+              name="description"
+              fullWidth
+              multiline
+              rows={3}
+              value={formData.description}
+              onChange={handleChange}
+              inputProps={{ maxLength: 500 }}
             />
 
             <FormControl fullWidth>
@@ -237,20 +251,20 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} disabled={createTagMutation.isPending}>
+          <Button onClick={handleClose} disabled={createFolderMutation.isPending}>
             Cancel
           </Button>
           <Button
             type="submit"
             variant="contained"
-            disabled={createTagMutation.isPending || !formData.name.trim()}
+            disabled={createFolderMutation.isPending || !formData.name.trim()}
             startIcon={
-              createTagMutation.isPending ? (
+              createFolderMutation.isPending ? (
                 <CircularProgress size={16} />
               ) : null
             }
           >
-            {createTagMutation.isPending ? 'Creating...' : 'New Tag'}
+            {createFolderMutation.isPending ? 'Creating...' : 'New Folder'}
           </Button>
         </DialogActions>
       </form>
