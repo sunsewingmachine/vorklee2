@@ -123,18 +123,18 @@ export function ContextMenu({
   const menuItems = [];
 
   if (type === 'folder') {
-    if (onCreateSubfolder) {
-      menuItems.push({
-        label: 'Create Subfolder',
-        icon: <CreateNewFolderIcon fontSize="small" />,
-        onClick: handleCreateSubfolderClick,
-      });
-    }
     if (onAddTask) {
       menuItems.push({
         label: 'Add Task',
         icon: <AddTaskIcon fontSize="small" />,
         onClick: handleAddTaskClick,
+      });
+    }
+    if (onCreateSubfolder) {
+      menuItems.push({
+        label: 'Create Subfolder',
+        icon: <CreateNewFolderIcon fontSize="small" />,
+        onClick: handleCreateSubfolderClick,
       });
     }
     if (onRename) {
