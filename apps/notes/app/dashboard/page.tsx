@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -13,7 +12,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import Link from 'next/link';
-import { TagFilterBar } from '@/components/explorer/TagFilterBar';
 import { NotesExplorer } from '@/components/explorer/NotesExplorer';
 import { useDashboard } from '@/contexts/DashboardContext';
 
@@ -46,8 +44,7 @@ async function fetchNotes(tagIds?: string[]): Promise<Note[]> {
 }
 
 export default function DashboardPage() {
-  const { viewState } = useDashboard();
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const { viewState, selectedTagIds } = useDashboard();
 
   const { data: notes, isLoading: notesLoading, error: notesError } = useQuery({
     queryKey: ['notes', selectedTagIds],
@@ -56,16 +53,6 @@ export default function DashboardPage() {
 
   const isLoading = notesLoading;
   const error = notesError;
-
-  const handleTagToggle = (tagId: string) => {
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
-    );
-  };
-
-  const handleClearFilters = () => {
-    setSelectedTagIds([]);
-  };
 
   if (isLoading) {
     return (
@@ -109,18 +96,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <>
-          <TagFilterBar
-            selectedTagIds={selectedTagIds}
-            onTagToggle={handleTagToggle}
-            onClearFilters={handleClearFilters}
-          />
-          <NotesExplorer
-            notes={notes || []}
-            viewFilter={viewState.filter}
-            viewMode={viewState.mode}
-          />
-        </>
+        <NotesExplorer
+          notes={notes || []}
+          viewFilter={viewState.filter}
+          viewMode={viewState.mode}
+        />
       )}
     </Box>
   );

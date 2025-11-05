@@ -1,14 +1,17 @@
 'use client';
 
-import { Box, AppBar, Toolbar, Typography, IconButton, TextField, InputAdornment } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, IconButton, TextField, InputAdornment, Chip, Stack, Button, CircularProgress, Divider } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import ClearIcon from '@mui/icons-material/Clear';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { useTranslation } from '@/components/i18n/useTranslation';
 import { DashboardProvider, useDashboard } from '@/contexts/DashboardContext';
 import { ViewModeToggle } from '@/components/explorer/ViewModeToggle';
 import { CreateDropdown } from '@/components/CreateDropdown';
 import { useState, memo, useMemo, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 const DashboardToolbarContent = memo(function DashboardToolbarContent({ isDashboardPage }: { isDashboardPage: boolean }) {
   const { viewState, setViewState } = useDashboard();
@@ -27,6 +30,21 @@ const DashboardToolbarContent = memo(function DashboardToolbarContent({ isDashbo
   );
 });
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+async function fetchTags(): Promise<Tag[]> {
+  const response = await fetch('/api/tags');
+  if (!response.ok) {
+    throw new Error('Failed to fetch tags');
+  }
+  const json = await response.json();
+  return json.data || [];
+}
+
 // Expandable search component
 const ExpandableSearch = memo(function ExpandableSearch({ 
   isNotesPage, 
@@ -40,6 +58,11 @@ const ExpandableSearch = memo(function ExpandableSearch({
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { selectedTagIds, handleTagToggle, handleClearTagFilters } = useDashboard();
+  const { data: tags = [], isLoading: tagsLoading } = useQuery({
+    queryKey: ['tags'],
+    queryFn: fetchTags,
+  });
 
   useEffect(() => {
     if (isExpanded && inputRef.current) {
@@ -72,62 +95,122 @@ const ExpandableSearch = memo(function ExpandableSearch({
           <SearchIcon />
         </IconButton>
       ) : (
-        <Box 
-          component="form"
-          onSubmit={handleSearch}
-          sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: 1 }}
-        >
-          <TextField
-            inputRef={inputRef}
-            fullWidth
-            size="small"
-            placeholder="Search notes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                handleClose();
-              }
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    onClick={handleClose}
-                    sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ),
-              sx: {
-                bgcolor: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: 1,
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(255, 255, 255, 0.7)',
-                },
-                '& .MuiInputBase-input': {
-                  color: '#fff',
-                  '&::placeholder': {
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    opacity: 1,
+        <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, gap: 1 }}>
+          <Box 
+            component="form"
+            onSubmit={handleSearch}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          >
+            <TextField
+              inputRef={inputRef}
+              fullWidth
+              size="small"
+              placeholder="Search notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  handleClose();
+                }
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={handleClose}
+                      sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+                sx: {
+                  bgcolor: 'rgba(255, 255, 255, 0.15)',
+                  borderRadius: 1,
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(255, 255, 255, 0.7)',
+                  },
+                  '& .MuiInputBase-input': {
+                    color: '#fff',
+                    '&::placeholder': {
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      opacity: 1,
+                    },
                   },
                 },
-              },
-            }}
-          />
+              }}
+            />
+          </Box>
+          {tags.length > 0 && (
+            <>
+              <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', my: 0.5 }} />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: 500 }}>
+                  Filter by tags:
+                </Typography>
+                {tagsLoading ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={16} sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                      Loading tags...
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {tags.map((tag) => {
+                      const isSelected = selectedTagIds.includes(tag.id);
+                      return (
+                        <Chip
+                          key={tag.id}
+                          label={tag.name}
+                          onClick={() => handleTagToggle(tag.id)}
+                          size="small"
+                          sx={{
+                            bgcolor: isSelected ? (tag.color || '#1976d2') : 'rgba(255, 255, 255, 0.15)',
+                            color: isSelected ? 'white' : 'rgba(255, 255, 255, 0.9)',
+                            fontWeight: isSelected ? 600 : 400,
+                            border: isSelected ? 'none' : `1px solid ${tag.color || '#1976d2'}`,
+                            '&:hover': {
+                              opacity: 0.8,
+                              cursor: 'pointer',
+                            },
+                          }}
+                          icon={isSelected ? <LocalOfferIcon sx={{ color: 'white !important', fontSize: 14 }} /> : undefined}
+                        />
+                      );
+                    })}
+                    {selectedTagIds.length > 0 && (
+                      <Button
+                        size="small"
+                        startIcon={<ClearIcon />}
+                        onClick={handleClearTagFilters}
+                        sx={{ 
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          '&:hover': {
+                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                          },
+                        }}
+                      >
+                        Clear Filters
+                      </Button>
+                    )}
+                  </Stack>
+                )}
+              </Box>
+            </>
+          )}
         </Box>
       )}
     </>
@@ -194,7 +277,14 @@ const StableAppBar = memo(function StableAppBar({
         display: showTopBar ? 'block' : 'none', // Hide with CSS instead of unmounting
       }}
     >
-      <Toolbar>
+      <Toolbar
+        sx={{
+          flexDirection: isSearchExpanded ? 'column' : 'row',
+          alignItems: isSearchExpanded ? 'stretch' : 'center',
+          py: isSearchExpanded ? 1.5 : 1,
+          gap: isSearchExpanded ? 1 : 0,
+        }}
+      >
         {/* Search icon or expanded search field */}
         <ExpandableSearch 
           isNotesPage={isNotesPage} 
@@ -202,9 +292,11 @@ const StableAppBar = memo(function StableAppBar({
           onToggle={toggleSearch} 
         />
         {/* Only these children update, AppBar structure stays stable */}
-        <ToolbarTitle isTagsPage={isTagsPage} isSearchExpanded={isSearchExpanded} />
         {!isSearchExpanded && (
-          <ToolbarActions isNotesPage={isNotesPage} isDashboardPage={isDashboardPage} />
+          <>
+            <ToolbarTitle isTagsPage={isTagsPage} isSearchExpanded={isSearchExpanded} />
+            <ToolbarActions isNotesPage={isNotesPage} isDashboardPage={isDashboardPage} />
+          </>
         )}
       </Toolbar>
     </AppBar>

@@ -21,14 +21,22 @@ import {
 import { useTranslation } from '@/components/i18n/useTranslation';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 interface CreateTagDialogProps {
   open: boolean;
   onClose: () => void;
+  tag?: Tag | null; // If provided, this is edit mode
 }
 
-export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
+export function CreateTagDialog({ open, onClose, tag }: CreateTagDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const isEditMode = !!tag;
   
   // Predefined color options - ordered by relevance (main colors first, then shades)
   const colorOptions = [
@@ -55,21 +63,37 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Reset form when dialog opens/closes
+  // Reset form when dialog opens/closes or tag changes
   useEffect(() => {
     if (open) {
-      setFormData({
-        name: '',
-        color: '#1976d2',
-      });
+      if (tag) {
+        // Edit mode: populate with tag data
+        setFormData({
+          name: tag.name,
+          color: tag.color || '#1976d2',
+        });
+      } else {
+        // Create mode: reset to defaults
+        setFormData({
+          name: '',
+          color: '#1976d2',
+        });
+      }
       setErrors({});
     }
-  }, [open]);
+  }, [open, tag]);
 
   const createTagMutation = useMutation({
     mutationFn: async (data: { name: string; color?: string }) => {
-      const response = await fetch('/api/tags', {
-        method: 'POST',
+      if (isEditMode && !tag?.id) {
+        throw new Error('Tag ID is required for editing');
+      }
+      
+      const url = isEditMode ? `/api/tags/${tag!.id}` : '/api/tags';
+      const method = isEditMode ? 'PATCH' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
@@ -79,7 +103,7 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create tag');
+        throw new Error(error.error || `Failed to ${isEditMode ? 'update' : 'create'} tag`);
       }
 
       return response.json();
@@ -147,7 +171,7 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <LocalOfferIcon />
-            New Tag
+            {isEditMode ? 'Edit Tag' : 'New Tag'}
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -250,7 +274,9 @@ export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
               ) : null
             }
           >
-            {createTagMutation.isPending ? 'Creating...' : 'New Tag'}
+            {createTagMutation.isPending 
+              ? (isEditMode ? 'Updating...' : 'Creating...') 
+              : (isEditMode ? 'Update Tag' : 'Create Tag')}
           </Button>
         </DialogActions>
       </form>
