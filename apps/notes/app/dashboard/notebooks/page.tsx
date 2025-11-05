@@ -125,9 +125,14 @@ export default function NotebooksPage() {
         </Card>
       ) : (
         <Card>
-          <CardContent>
-            <List component="nav" aria-label={t('notebooks.menu.title')}>
-              {notebooks?.map((notebook) => (
+          <CardContent sx={{ py: 1 }}>
+            <List 
+              component="nav" 
+              aria-label={t('notebooks.menu.title')}
+              dense
+              sx={{ py: 0 }}
+            >
+              {notebooks?.map((notebook, index) => (
                 <NotebookTreeItem
                   key={notebook.id}
                   notebook={notebook}
@@ -136,6 +141,7 @@ export default function NotebooksPage() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onCreateSubFolder={handleCreateSubFolder}
+                  isLastChild={index === (notebooks.length - 1)}
                 />
               ))}
             </List>

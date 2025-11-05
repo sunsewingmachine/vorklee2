@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
@@ -19,6 +19,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { useTranslation } from '@/components/i18n/useTranslation';
+import FolderIcon from '@mui/icons-material/Folder';
 import type { NotebookWithChildren } from '@/services/notebooks.service';
 
 interface CreateNotebookDialogProps {
@@ -36,6 +37,25 @@ export function CreateNotebookDialog({
 }: CreateNotebookDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  // Predefined color options - ordered by relevance (main colors first, then shades)
+  const colorOptions = [
+    { value: '#1976d2', label: 'Blue' },
+    { value: '#0288d1', label: 'Light Blue' },
+    { value: '#2e7d32', label: 'Green' },
+    { value: '#388e3c', label: 'Dark Green' },
+    { value: '#00796b', label: 'Teal' },
+    { value: '#dc004e', label: 'Red' },
+    { value: '#d32f2f', label: 'Dark Red' },
+    { value: '#ed6c02', label: 'Orange' },
+    { value: '#f57c00', label: 'Deep Orange' },
+    { value: '#ffc107', label: 'Yellow' },
+    { value: '#9c27b0', label: 'Purple' },
+    { value: '#7b1fa2', label: 'Dark Purple' },
+    { value: '#c2185b', label: 'Pink' },
+    { value: '#000000', label: 'Black' },
+    { value: '#ffffff', label: 'White' },
+  ];
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -43,6 +63,19 @@ export function CreateNotebookDialog({
     parentId: parentId || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Update formData when parentId prop changes (when dialog opens with different parent)
+  useEffect(() => {
+    if (open) {
+      setFormData((prev) => ({
+        ...prev,
+        parentId: parentId || '',
+        // Reset name and description when opening dialog
+        name: '',
+        description: '',
+      }));
+    }
+  }, [parentId, open]);
 
   // Flatten notebooks for parent selection
   const flattenNotebooks = (
@@ -127,7 +160,7 @@ export function CreateNotebookDialog({
       name: '',
       description: '',
       color: '#1976d2',
-      parentId: parentId || '',
+      parentId: '',
     });
     setErrors({});
     createNotebookMutation.reset();
@@ -148,15 +181,53 @@ export function CreateNotebookDialog({
       return;
     }
 
+    // Use parentId prop if provided (for subfolder creation), otherwise use formData.parentId
+    // If parentId prop is provided, it means we're creating a subfolder, so use it
+    const finalParentId = parentId ? parentId : (formData.parentId || null);
+
     createNotebookMutation.mutate({
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
       color: formData.color || undefined,
-      parentId: formData.parentId || null,
+      parentId: finalParentId,
     });
   };
 
   const flatNotebooks = flattenNotebooks(notebooks);
+
+  // Get parent folder path when creating subfolder
+  const getParentPath = (): string[] => {
+    if (!parentId || !notebooks || notebooks.length === 0) {
+      return [];
+    }
+
+    const findParentPath = (
+      items: NotebookWithChildren[],
+      targetId: string,
+      path: string[] = []
+    ): string[] | null => {
+      for (const item of items) {
+        const currentPath = [...path, item.name];
+        
+        if (item.id === targetId) {
+          return currentPath;
+        }
+
+        if (item.children && item.children.length > 0) {
+          const found = findParentPath(item.children, targetId, currentPath);
+          if (found) {
+            return found;
+          }
+        }
+      }
+      return null;
+    };
+
+    const path = findParentPath(notebooks, parentId);
+    return path || [];
+  };
+
+  const parentPath = getParentPath();
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -166,6 +237,14 @@ export function CreateNotebookDialog({
             ? t('notebooks.menu.actions.createSubFolder')
             : t('notebooks.menu.actions.create')}
         </DialogTitle>
+        {parentPath.length > 0 && (
+          <Box sx={{ px: 3, pt: 0, pb: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <FolderIcon sx={{ fontSize: 16 }} />
+              {parentPath.join(' / ')}
+            </Typography>
+          </Box>
+        )}
         <DialogContent>
           {createNotebookMutation.error && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -234,18 +313,67 @@ export function CreateNotebookDialog({
               </FormControl>
             )}
 
-            <TextField
-              label="Color"
-              name="color"
-              type="color"
-              fullWidth
-              value={formData.color}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{
-                style: { height: '50px' },
-              }}
-            />
+            <FormControl fullWidth>
+              <InputLabel id="color-label">Color</InputLabel>
+              <Select
+                labelId="color-label"
+                id="color-select"
+                value={formData.color}
+                label="Color"
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, color: e.target.value }));
+                  if (errors.color) {
+                    setErrors((prev) => {
+                      const newErrors = { ...prev };
+                      delete newErrors.color;
+                      return newErrors;
+                    });
+                  }
+                }}
+                renderValue={(value) => {
+                  const selectedColor = colorOptions.find((opt) => opt.value === value);
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: '4px',
+                          bgcolor: value,
+                          border: value === '#ffffff' ? '1px solid rgba(0,0,0,0.2)' : 'none',
+                        }}
+                      />
+                      <Typography variant="body2">{selectedColor?.label || 'Select color'}</Typography>
+                    </Box>
+                  );
+                }}
+              >
+                {colorOptions.map((colorOption) => (
+                  <MenuItem key={colorOption.value} value={colorOption.value}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '4px',
+                          bgcolor: colorOption.value,
+                          border: colorOption.value === '#ffffff' ? '1px solid rgba(0,0,0,0.2)' : 'none',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography variant="body2">{colorOption.label}</Typography>
+                      {formData.color === colorOption.value && (
+                        <Box sx={{ ml: 'auto' }}>
+                          <Typography variant="body2" color="primary">
+                            ✓
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </DialogContent>
         <DialogActions>
