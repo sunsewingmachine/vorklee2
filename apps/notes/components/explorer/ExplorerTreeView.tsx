@@ -15,8 +15,8 @@ import NoteIcon from '@mui/icons-material/Note';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AddBoxIcon from '@mui/icons-material/AddBox';
+import IndeterminateCheckBoxIcon from '@mui/icons-material/IndeterminateCheckBox';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
@@ -213,7 +213,7 @@ function FolderItem({
 
   return (
     <>
-      <ListItem disablePadding dense sx={{ py: 0.25 }} ref={itemRef}>
+      <ListItem disablePadding dense sx={{ py: 0.125 }} ref={itemRef}>
         <ListItemButton
           onClick={handleClick}
           onContextMenu={handleContextMenu}
@@ -226,10 +226,10 @@ function FolderItem({
           dense
           sx={{
             borderRadius: 1,
-            py: 0.5,
-            px: 1,
-            minHeight: 32,
-            pl: 1 + level * 2,
+            py: 0.25,
+            px: 0.75,
+            minHeight: 28,
+            pl: 0.75 + level * 1.5,
             opacity: isDragging ? 0.5 : 1,
             bgcolor: isHighlighted 
               ? 'primary.light' 
@@ -261,16 +261,30 @@ function FolderItem({
             },
           }}
         >
-          <ListItemIcon sx={{ minWidth: 32 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <ListItemIcon sx={{ minWidth: 28 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
               {hasChildren ? (
                 isExpanded ? (
-                  <ExpandLessIcon fontSize="small" sx={{ fontSize: 16 }} />
+                  <IndeterminateCheckBoxIcon
+                    fontSize="small"
+                    sx={{
+                      fontSize: 18,
+                      color: 'primary.main',
+                      cursor: 'pointer'
+                    }}
+                  />
                 ) : (
-                  <ExpandMoreIcon fontSize="small" sx={{ fontSize: 16 }} />
+                  <AddBoxIcon
+                    fontSize="small"
+                    sx={{
+                      fontSize: 18,
+                      color: 'primary.main',
+                      cursor: 'pointer'
+                    }}
+                  />
                 )
               ) : (
-                <Box sx={{ width: 16 }} />
+                <Box sx={{ width: 18 }} />
               )}
               {isExpanded ? (
                 <FolderOpenIcon
@@ -462,7 +476,7 @@ function NoteItem({
 
   return (
     <>
-      <ListItem disablePadding dense sx={{ py: 0.25 }} ref={itemRef}>
+      <ListItem disablePadding dense sx={{ py: 0.125 }} ref={itemRef}>
         <ListItemButton
           component={Link}
           href={`/dashboard/notes/${note.id}`}
@@ -473,10 +487,10 @@ function NoteItem({
           dense
           sx={{
             borderRadius: 1,
-            py: 0.5,
-            px: 1,
-            minHeight: 32,
-            pl: 2 + level * 2,
+            py: 0.25,
+            px: 0.75,
+            minHeight: 28,
+            pl: 1.5 + level * 1.5,
             opacity: isDragging ? 0.5 : 1,
             cursor: isDragging ? 'grabbing' : 'grab',
             bgcolor: isHighlighted ? 'primary.light' : 'transparent',
@@ -492,12 +506,12 @@ function NoteItem({
             },
           }}
         >
-          <ListItemIcon sx={{ minWidth: 32 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <ListItemIcon sx={{ minWidth: 28 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
               {note.isPinned && (
-                <PushPinIcon fontSize="small" color="primary" sx={{ fontSize: 14 }} />
+                <PushPinIcon fontSize="small" color="primary" sx={{ fontSize: 12 }} />
               )}
-              <NoteIcon fontSize="small" sx={{ fontSize: 18 }} />
+              <NoteIcon fontSize="small" sx={{ fontSize: 16 }} />
             </Box>
           </ListItemIcon>
           <ListItemText
