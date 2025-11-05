@@ -102,6 +102,7 @@ function FolderItem({
   itemRef,
   highlightedItemId,
   highlightedItemType,
+  highlightedItemRef,
 }: {
   node: TreeNode;
   level: number;
@@ -122,6 +123,7 @@ function FolderItem({
   itemRef?: React.RefObject<HTMLDivElement>;
   highlightedItemId?: string | null;
   highlightedItemType?: 'note' | 'folder' | null;
+  highlightedItemRef?: React.RefObject<HTMLDivElement>;
 }) {
   const isExpanded = expandedFolders.has(node.notebook.id);
   const hasChildren = node.children.length > 0 || node.notes.length > 0;
@@ -348,6 +350,7 @@ function FolderItem({
                 itemRef={childRef}
                 highlightedItemId={highlightedItemId}
                 highlightedItemType={highlightedItemType}
+                highlightedItemRef={highlightedItemRef}
               />
             );
           })}
@@ -960,6 +963,7 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
                 itemRef={folderRef}
                 highlightedItemId={highlightedItemId}
                 highlightedItemType={highlightedItemType}
+                highlightedItemRef={highlightedItemRef}
               />
             );
           })}
