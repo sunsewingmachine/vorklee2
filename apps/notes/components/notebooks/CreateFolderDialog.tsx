@@ -87,9 +87,32 @@ export function CreateFolderDialog({ open, onClose, parentId }: CreateFolderDial
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate and refetch notebooks
       queryClient.invalidateQueries({ queryKey: ['notebooks'] });
+      
+      // Expand the created folder and its parent folders
+      const createdFolder = data?.data;
+      if (createdFolder) {
+        // Get all ancestor folder IDs by traversing up the parent chain
+        const folderIdsToExpand: string[] = [createdFolder.id];
+        let currentParentId: string | null = createdFolder.parentId || parentId || null;
+        
+        // We'll expand all ancestors by fetching notebooks and traversing
+        // For now, we'll expand the created folder and its immediate parent
+        // The tree view will handle expanding further ancestors if needed
+        if (currentParentId) {
+          folderIdsToExpand.push(currentParentId);
+        }
+        
+        // Dispatch custom event to expand folders
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('expand-folders', {
+            detail: { folderIds: folderIdsToExpand }
+          }));
+        }
+      }
+      
       handleClose();
     },
   });

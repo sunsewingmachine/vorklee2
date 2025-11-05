@@ -65,10 +65,42 @@ export default function NewNotePage() {
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate and refetch the notes query
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-      router.push('/dashboard');
+      
+      const createdNote = data?.data;
+      if (createdNote) {
+        // Check if view mode is tree (stored in localStorage via DashboardContext)
+        try {
+          const storedViewState = localStorage.getItem('notes-dashboard-view-state');
+          const viewState = storedViewState ? JSON.parse(storedViewState) : { mode: 'tree' };
+          
+          // Expand parent folders if note has a notebook
+          if (createdNote.notebookId) {
+            // Dispatch event to expand folders - this will be handled by ExplorerTreeView
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('expand-folders', {
+                detail: { folderIds: [createdNote.notebookId] }
+              }));
+            }
+          }
+          
+          // If view mode is tree, navigate to the note detail page
+          // Otherwise, go to dashboard
+          if (viewState.mode === 'tree') {
+            router.push(`/dashboard/notes/${createdNote.id}`);
+          } else {
+            router.push('/dashboard');
+          }
+        } catch (error) {
+          // Default to navigating to note detail page
+          console.error('Failed to check view state:', error);
+          router.push(`/dashboard/notes/${createdNote.id}`);
+        }
+      } else {
+        router.push('/dashboard');
+      }
     },
   });
 

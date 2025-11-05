@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Box,
   ListItemButton,
@@ -510,8 +510,45 @@ function NoteItem({
   );
 }
 
+const EXPANDED_FOLDERS_STORAGE_KEY = 'notes-explorer-expanded-folders';
+
+// Helper function to get all ancestor folder IDs for a given folder ID
+function getAncestorFolderIds(notebookId: string, notebooks: Notebook[]): string[] {
+  const notebook = notebooks.find(nb => nb.id === notebookId);
+  if (!notebook || !notebook.parentId) return [];
+  
+  const ancestors: string[] = [];
+  let currentParentId: string | null = notebook.parentId;
+  
+  while (currentParentId) {
+    const parentNotebook = notebooks.find(nb => nb.id === currentParentId);
+    if (!parentNotebook) break;
+    
+    ancestors.push(parentNotebook.id);
+    currentParentId = parentNotebook.parentId;
+  }
+  
+  return ancestors;
+}
+
 export function ExplorerTreeView({ notes, notebooks, viewFilter }: ExplorerTreeViewProps) {
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  // Load expanded folders from localStorage on mount
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    
+    try {
+      const stored = localStorage.getItem(EXPANDED_FOLDERS_STORAGE_KEY);
+      if (stored) {
+        const array = JSON.parse(stored) as string[];
+        return new Set(array);
+      }
+    } catch (error) {
+      console.error('Failed to load expanded folders from localStorage:', error);
+    }
+    
+    return new Set();
+  });
+  
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<{ type: 'note' | 'folder'; id: string } | null>(null);
   const [createSubfolderDialogOpen, setCreateSubfolderDialogOpen] = useState(false);
@@ -526,6 +563,45 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter }: ExplorerTreeV
     () => notes.filter((note) => !note.notebookId),
     [notes]
   );
+
+  // Save expanded folders to localStorage whenever they change
+  useEffect(() => {
+    try {
+      const array = Array.from(expandedFolders);
+      localStorage.setItem(EXPANDED_FOLDERS_STORAGE_KEY, JSON.stringify(array));
+    } catch (error) {
+      console.error('Failed to save expanded folders to localStorage:', error);
+    }
+  }, [expandedFolders]);
+
+  // Function to expand folders and their ancestors
+  const expandFolders = useCallback((folderIds: string[]) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      folderIds.forEach(id => next.add(id));
+      
+      // Also expand all ancestors of each folder
+      folderIds.forEach(folderId => {
+        const ancestors = getAncestorFolderIds(folderId, notebooks);
+        ancestors.forEach(ancestorId => next.add(ancestorId));
+      });
+      
+      return next;
+    });
+  }, [notebooks]);
+
+  // Expose function to expand parent folders for a given notebook ID
+  useEffect(() => {
+    // Listen for custom event to expand folders
+    const handleExpandFolders = ((e: CustomEvent<{ folderIds: string[] }>) => {
+      expandFolders(e.detail.folderIds);
+    }) as EventListener;
+    
+    window.addEventListener('expand-folders' as any, handleExpandFolders);
+    return () => {
+      window.removeEventListener('expand-folders' as any, handleExpandFolders);
+    };
+  }, [expandFolders]);
 
   const handleToggleFolder = (id: string) => {
     setExpandedFolders((prev) => {
