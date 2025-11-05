@@ -19,24 +19,17 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { useTranslation } from '@/components/i18n/useTranslation';
-import FolderIcon from '@mui/icons-material/Folder';
-import type { NotebookWithChildren } from '@/services/notebooks.service';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 
-interface CreateNotebookDialogProps {
+interface CreateTagDialogProps {
   open: boolean;
   onClose: () => void;
-  parentId?: string | null;
-  notebooks?: NotebookWithChildren[];
 }
 
-export function CreateNotebookDialog({
-  open,
-  onClose,
-  parentId = null,
-  notebooks = [],
-}: CreateNotebookDialogProps) {
+export function CreateTagDialog({ open, onClose }: CreateTagDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  
   // Predefined color options - ordered by relevance (main colors first, then shades)
   const colorOptions = [
     { value: '#1976d2', label: 'Blue' },
@@ -58,62 +51,47 @@ export function CreateNotebookDialog({
 
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
     color: '#1976d2',
-    parentId: parentId || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Update formData when parentId prop changes (when dialog opens with different parent)
+  // Reset form when dialog opens/closes
   useEffect(() => {
     if (open) {
-      setFormData((prev) => ({
-        ...prev,
-        parentId: parentId || '',
-        // Reset name and description when opening dialog
+      setFormData({
         name: '',
-        description: '',
-      }));
+        color: '#1976d2',
+      });
+      setErrors({});
     }
-  }, [parentId, open]);
+  }, [open]);
 
-
-  const createNotebookMutation = useMutation({
-    mutationFn: async (data: {
-      name: string;
-      description?: string;
-      color?: string;
-      parentId?: string | null;
-    }) => {
-      const response = await fetch('/api/notebooks', {
+  const createTagMutation = useMutation({
+    mutationFn: async (data: { name: string; color?: string }) => {
+      const response = await fetch('/api/tags', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
-          description: data.description || undefined,
           color: data.color || undefined,
-          parentId: data.parentId || null,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create notebook');
+        throw new Error(error.error || 'Failed to create tag');
       }
 
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate and refetch notebooks
-      queryClient.invalidateQueries({ queryKey: ['notebooks'] });
-      queryClient.invalidateQueries({ queryKey: ['notebooks', 'hierarchical'] });
+      // Invalidate and refetch tags
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
       handleClose();
     },
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -130,16 +108,13 @@ export function CreateNotebookDialog({
     }
   };
 
-
   const handleClose = () => {
     setFormData({
       name: '',
-      description: '',
       color: '#1976d2',
-      parentId: '',
     });
     setErrors({});
-    createNotebookMutation.reset();
+    createTagMutation.reset();
     onClose();
   };
 
@@ -149,7 +124,10 @@ export function CreateNotebookDialog({
     // Validation
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) {
-      newErrors.name = t('notebooks.menu.actions.create') + ' name is required';
+      newErrors.name = 'Tag name is required';
+    }
+    if (formData.name.trim().length > 50) {
+      newErrors.name = 'Tag name must be 50 characters or less';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -157,79 +135,33 @@ export function CreateNotebookDialog({
       return;
     }
 
-    // Use parentId prop if provided (for subfolder creation), otherwise create at root level
-    const finalParentId = parentId || null;
-
-    createNotebookMutation.mutate({
+    createTagMutation.mutate({
       name: formData.name.trim(),
-      description: formData.description.trim() || undefined,
       color: formData.color || undefined,
-      parentId: finalParentId,
     });
   };
-
-  // Get parent folder path when creating subfolder
-  const getParentPath = (): string[] => {
-    if (!parentId || !notebooks || notebooks.length === 0) {
-      return [];
-    }
-
-    const findParentPath = (
-      items: NotebookWithChildren[],
-      targetId: string,
-      path: string[] = []
-    ): string[] | null => {
-      for (const item of items) {
-        const currentPath = [...path, item.name];
-        
-        if (item.id === targetId) {
-          return currentPath;
-        }
-
-        if (item.children && item.children.length > 0) {
-          const found = findParentPath(item.children, targetId, currentPath);
-          if (found) {
-            return found;
-          }
-        }
-      }
-      return null;
-    };
-
-    const path = findParentPath(notebooks, parentId);
-    return path || [];
-  };
-
-  const parentPath = getParentPath();
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>
-          {parentId
-            ? t('notebooks.menu.actions.createSubFolder')
-            : t('notebooks.menu.actions.create')}
-        </DialogTitle>
-        {parentPath.length > 0 && (
-          <Box sx={{ px: 3, pt: 0, pb: 1 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <FolderIcon sx={{ fontSize: 16 }} />
-              {parentPath.join(' / ')}
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LocalOfferIcon />
+            Create Tag
           </Box>
-        )}
+        </DialogTitle>
         <DialogContent>
-          {createNotebookMutation.error && (
+          {createTagMutation.error && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {createNotebookMutation.error instanceof Error
-                ? createNotebookMutation.error.message
-                : 'Failed to create notebook'}
+              {createTagMutation.error instanceof Error
+                ? createTagMutation.error.message
+                : 'Failed to create tag'}
             </Alert>
           )}
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
-              label="Notebook Name"
+              label="Tag Name"
               name="name"
               required
               fullWidth
@@ -238,20 +170,8 @@ export function CreateNotebookDialog({
               error={!!errors.name}
               helperText={errors.name}
               autoFocus
-              inputProps={{ maxLength: 100 }}
+              inputProps={{ maxLength: 50 }}
             />
-
-            <TextField
-              label="Description"
-              name="description"
-              fullWidth
-              multiline
-              rows={3}
-              value={formData.description}
-              onChange={handleChange}
-              inputProps={{ maxLength: 500 }}
-            />
-
 
             <FormControl fullWidth>
               <InputLabel id="color-label">Color</InputLabel>
@@ -317,20 +237,20 @@ export function CreateNotebookDialog({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} disabled={createNotebookMutation.isPending}>
+          <Button onClick={handleClose} disabled={createTagMutation.isPending}>
             Cancel
           </Button>
           <Button
             type="submit"
             variant="contained"
-            disabled={createNotebookMutation.isPending || !formData.name.trim()}
+            disabled={createTagMutation.isPending || !formData.name.trim()}
             startIcon={
-              createNotebookMutation.isPending ? (
+              createTagMutation.isPending ? (
                 <CircularProgress size={16} />
               ) : null
             }
           >
-            {createNotebookMutation.isPending ? 'Creating...' : t('notebooks.menu.actions.create')}
+            {createTagMutation.isPending ? 'Creating...' : 'Create Tag'}
           </Button>
         </DialogActions>
       </form>

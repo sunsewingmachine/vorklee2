@@ -1,9 +1,7 @@
 'use client';
 
-import { Box, AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemIcon, ListItemText, ListItemButton, Tooltip, Divider, Collapse } from '@mui/material';
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
+import { Box, AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemIcon, ListItemText, ListItemButton, Divider, Collapse } from '@mui/material';
+import { useState, createContext, useContext } from 'react';
 import MenuIcon from '@mui/icons-material/Menu';
 import NoteIcon from '@mui/icons-material/Note';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
@@ -27,30 +25,129 @@ const drawerWidth = 280;
 // Note: These links point to the notes app (port 3001) or can be proxied through core app
 const NOTES_APP_URL = process.env.NEXT_PUBLIC_NOTES_APP_URL || 'http://localhost:3001';
 
-const appMenus = {
+type MenuItem = {
+  text: string;
+  icon: React.ReactNode;
+  href: string;
+  isExternal?: boolean;
+};
+
+type AppMenu = {
+  label: string;
+  icon: React.ReactNode;
+  mainHref?: string;
+  items: MenuItem[];
+};
+
+const appMenus: Record<string, AppMenu> = {
   notes: {
     label: 'Notes',
     icon: <NoteIcon />,
+    mainHref: `${NOTES_APP_URL}/dashboard`,
     items: [
-      { text: 'All Notes', icon: <NoteIcon />, href: `${NOTES_APP_URL}/dashboard` },
-      { text: 'Notebooks', icon: <NoteIcon />, href: `${NOTES_APP_URL}/dashboard/notebooks` },
-      { text: 'Tags', icon: <LocalOfferIcon />, href: `${NOTES_APP_URL}/dashboard/tags` },
-      { text: 'Search', icon: <SearchIcon />, href: `${NOTES_APP_URL}/dashboard/search` },
+      { text: 'Tags', icon: <LocalOfferIcon />, href: `${NOTES_APP_URL}/dashboard/tags`, isExternal: true },
+      { text: 'Search', icon: <SearchIcon />, href: `${NOTES_APP_URL}/dashboard/search`, isExternal: true },
     ],
   },
   attendance: {
     label: 'Attendance',
     icon: <AccessTimeIcon />,
     items: [
-      { text: 'Dashboard', icon: <DashboardIcon />, href: '/dashboard/attendance' },
-      { text: 'Records', icon: <HistoryIcon />, href: '/dashboard/attendance/records' },
-      { text: 'Reports', icon: <AssessmentIcon />, href: '/dashboard/attendance/reports' },
-      { text: 'Shifts', icon: <WorkIcon />, href: '/dashboard/attendance/shifts' },
-      { text: 'Employees', icon: <PeopleIcon />, href: '/dashboard/attendance/employees' },
-      { text: 'Calendar', icon: <CalendarTodayIcon />, href: '/dashboard/attendance/calendar' },
+      { text: 'Dashboard', icon: <DashboardIcon />, href: 'attendance/dashboard' },
+      { text: 'Records', icon: <HistoryIcon />, href: 'attendance/records' },
+      { text: 'Reports', icon: <AssessmentIcon />, href: 'attendance/reports' },
+      { text: 'Shifts', icon: <WorkIcon />, href: 'attendance/shifts' },
+      { text: 'Employees', icon: <PeopleIcon />, href: 'attendance/employees' },
+      { text: 'Calendar', icon: <CalendarTodayIcon />, href: 'attendance/calendar' },
     ],
   },
 };
+
+// Context for managing current view
+type ViewContextType = {
+  currentView: string;
+  setCurrentView: (view: string) => void;
+};
+
+const ViewContext = createContext<ViewContextType>({
+  currentView: 'dashboard',
+  setCurrentView: () => {},
+});
+
+export const useViewContext = () => useContext(ViewContext);
+
+// Component to render content based on current view
+function ViewContent({ view }: { view: string }) {
+  if (view.startsWith('http')) {
+    // External URL - use iframe
+    // Height is full viewport since we hide the top bar for external views
+    return (
+      <Box
+        sx={{
+          width: '100%',
+          height: '100vh',
+          position: 'relative',
+        }}
+      >
+        <Box
+          component="iframe"
+          src={view}
+          sx={{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            display: 'block',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          }}
+        />
+      </Box>
+    );
+  }
+
+  // Internal views
+  switch (view) {
+    case 'dashboard':
+      return (
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+            Welcome to Vorklee2 Platform
+          </Typography>
+          <Typography variant="body1" color="text.secondary" paragraph sx={{ mb: 4 }}>
+            Your unified workspace for all applications
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Select an option from the menu to get started.
+          </Typography>
+        </Box>
+      );
+    case 'settings':
+      return (
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+            Settings
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Settings page content goes here.
+          </Typography>
+        </Box>
+      );
+    default:
+      // Attendance views and other internal views
+      const viewName = view.split('/').pop() || view;
+      return (
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+            {viewName.charAt(0).toUpperCase() + viewName.slice(1)}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Content for {view} will be displayed here.
+          </Typography>
+        </Box>
+      );
+  }
+}
 
 function UnifiedDashboardLayoutInner({
   children,
@@ -62,7 +159,7 @@ function UnifiedDashboardLayoutInner({
     notes: true, // Default to expanded
     attendance: false, // Default to collapsed
   });
-  const pathname = usePathname();
+  const [currentView, setCurrentView] = useState<string>('dashboard');
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -75,8 +172,16 @@ function UnifiedDashboardLayoutInner({
     }));
   };
 
+  const handleMenuItemClick = (href: string, isExternal?: boolean) => {
+    if (isExternal) {
+      setCurrentView(href);
+    } else {
+      setCurrentView(href);
+    }
+  };
+
   const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + '/');
+    return currentView === href;
   };
 
   const drawer = (
@@ -106,11 +211,10 @@ function UnifiedDashboardLayoutInner({
         {/* Home/Dashboard */}
         <ListItem disablePadding>
           <ListItemButton
-            component={Link}
-            href="/dashboard"
+            onClick={() => handleMenuItemClick('dashboard')}
             sx={{
               color: '#e3f2fd',
-              bgcolor: pathname === '/dashboard' ? 'rgba(25, 118, 210, 0.2)' : 'transparent',
+              bgcolor: currentView === 'dashboard' ? 'rgba(25, 118, 210, 0.2)' : 'transparent',
               '&:hover': {
                 bgcolor: 'rgba(25, 118, 210, 0.1)',
                 borderLeft: '3px solid #1976d2',
@@ -128,23 +232,44 @@ function UnifiedDashboardLayoutInner({
         <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)', my: 1 }} />
 
         {/* App Menus */}
-        {Object.entries(appMenus).map(([appKey, app]) => (
-          <Box key={appKey}>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => toggleAppExpansion(appKey)}
-                sx={{
-                  color: '#e3f2fd',
-                  '&:hover': {
-                    bgcolor: 'rgba(25, 118, 210, 0.1)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: '#90caf9' }}>{app.icon}</ListItemIcon>
-                <ListItemText primary={app.label} sx={{ '& .MuiTypography-root': { fontWeight: 600 } }} />
-                {expandedApps[appKey] ? <ExpandLess /> : <ExpandMore />}
-              </ListItemButton>
-            </ListItem>
+        {Object.entries(appMenus).map(([appKey, app]) => {
+          const mainHref = app.mainHref;
+          const handleMainClick = (e: React.MouseEvent) => {
+            e.preventDefault();
+            // For Notes menu with mainHref, navigate to dashboard AND ensure submenu is expanded
+            if (mainHref) {
+              // Always ensure submenu is expanded when clicking main menu
+              if (!expandedApps[appKey]) {
+                toggleAppExpansion(appKey);
+              }
+              // Navigate to the main href
+              handleMenuItemClick(mainHref, true);
+            } else {
+              // For menus without mainHref, just toggle expansion
+              toggleAppExpansion(appKey);
+            }
+          };
+          
+          return (
+            <Box key={appKey}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={handleMainClick}
+                  sx={{
+                    color: '#e3f2fd',
+                    bgcolor: mainHref && isActive(mainHref) ? 'rgba(25, 118, 210, 0.2)' : 'transparent',
+                    '&:hover': {
+                      bgcolor: 'rgba(25, 118, 210, 0.1)',
+                      borderLeft: '3px solid #1976d2',
+                    },
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <ListItemIcon sx={{ color: '#90caf9' }}>{app.icon}</ListItemIcon>
+                  <ListItemText primary={app.label} sx={{ '& .MuiTypography-root': { fontWeight: mainHref && isActive(mainHref) ? 600 : 600 } }} />
+                  {expandedApps[appKey] ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+              </ListItem>
             <Collapse in={expandedApps[appKey]} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
                 {app.items.map((item) => {
@@ -152,9 +277,11 @@ function UnifiedDashboardLayoutInner({
                   return (
                     <ListItem key={item.href} disablePadding>
                       <ListItemButton
-                        component="a"
-                        href={item.href}
-                        target={item.href.startsWith('http') ? '_self' : undefined}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleMenuItemClick(item.href, item.isExternal);
+                        }}
                         sx={{
                           pl: 4,
                           color: '#e3f2fd',
@@ -177,18 +304,18 @@ function UnifiedDashboardLayoutInner({
               </List>
             </Collapse>
           </Box>
-        ))}
+        );
+        })}
 
         <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)', my: 1 }} />
 
         {/* Settings */}
         <ListItem disablePadding>
           <ListItemButton
-            component={Link}
-            href="/dashboard/settings"
+            onClick={() => handleMenuItemClick('settings')}
             sx={{
               color: '#e3f2fd',
-              bgcolor: pathname === '/dashboard/settings' ? 'rgba(25, 118, 210, 0.2)' : 'transparent',
+              bgcolor: currentView === 'settings' ? 'rgba(25, 118, 210, 0.2)' : 'transparent',
               '&:hover': {
                 bgcolor: 'rgba(25, 118, 210, 0.1)',
                 borderLeft: '3px solid #1976d2',
@@ -206,31 +333,36 @@ function UnifiedDashboardLayoutInner({
     </Box>
   );
 
+  // Hide top bar when showing external content (iframe) - let the embedded app show its own top bar
+  const isExternalView = currentView.startsWith('http');
+  
   return (
     <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          bgcolor: '#1976d2',
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
-            Vorklee2 Platform
-          </Typography>
-        </Toolbar>
-      </AppBar>
+      {!isExternalView && (
+        <AppBar
+          position="fixed"
+          sx={{
+            width: { sm: `calc(100% - ${drawerWidth}px)` },
+            ml: { sm: `${drawerWidth}px` },
+            bgcolor: '#1976d2',
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+          }}
+        >
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { sm: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
+              Vorklee2 Platform
+            </Typography>
+          </Toolbar>
+        </AppBar>
+      )}
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -238,7 +370,13 @@ function UnifiedDashboardLayoutInner({
         <Drawer
           variant="temporary"
           open={mobileOpen}
-          onClose={handleDrawerToggle}
+          onClose={(event, reason) => {
+            // Only close drawer on backdrop click or ESC key, not on menu item clicks
+            // Menu items will handle their own navigation without closing drawer
+            if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+              handleDrawerToggle();
+            }
+          }}
           ModalProps={{
             keepMounted: true,
           }}
@@ -264,12 +402,13 @@ function UnifiedDashboardLayoutInner({
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: currentView.startsWith('http') ? 0 : 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
+          mt: isExternalView ? 0 : 8,
+          overflow: 'auto',
         }}
       >
-        {children}
+        <ViewContent view={currentView} />
       </Box>
     </Box>
   );

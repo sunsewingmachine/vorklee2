@@ -12,10 +12,6 @@ import {
   CardContent,
   Typography,
   Stack,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   FormControlLabel,
   Checkbox,
   Alert,
@@ -28,17 +24,10 @@ import {
   DialogContentText,
   DialogActions,
 } from '@mui/material';
+import { TagSelector } from '@/components/tags/TagSelector';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Cancel';
-import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-
-interface Notebook {
-  id: string;
-  name: string;
-  color: string;
-}
+import DeleteIcon from '@mui/icons-material/Delete';
 
 interface Note {
   id: string;
@@ -49,21 +38,17 @@ interface Note {
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
+  tags?: Array<{
+    id: string;
+    name: string;
+    color: string | null;
+  }>;
 }
 
 async function fetchNote(id: string): Promise<Note> {
   const response = await fetch(`/api/notes/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch note');
-  }
-  const json = await response.json();
-  return json.data;
-}
-
-async function fetchNotebooks(): Promise<Notebook[]> {
-  const response = await fetch('/api/notebooks');
-  if (!response.ok) {
-    throw new Error('Failed to fetch notebooks');
   }
   const json = await response.json();
   return json.data;
@@ -79,8 +64,8 @@ export default function NoteDetailPage() {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-    notebookId: '',
     isPinned: false,
+    tagIds: [] as string[],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -92,20 +77,14 @@ export default function NoteDetailPage() {
     queryFn: () => fetchNote(noteId),
   });
 
-  // Fetch notebooks
-  const { data: notebooks = [] } = useQuery({
-    queryKey: ['notebooks'],
-    queryFn: fetchNotebooks,
-  });
-
   // Update form when note loads
   useEffect(() => {
     if (note) {
       setFormData({
         title: note.title,
         content: note.content || '',
-        notebookId: note.notebookId || '',
         isPinned: note.isPinned,
+        tagIds: note.tags?.map((t) => t.id) || [],
       });
     }
   }, [note]);
@@ -169,13 +148,6 @@ export default function NoteDetailPage() {
     }
   };
 
-  const handleSelectChange = (e: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      notebookId: e.target.value,
-    }));
-  };
-
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -199,8 +171,8 @@ export default function NoteDetailPage() {
     const submitData = {
       title: formData.title,
       content: formData.content || undefined,
-      notebookId: formData.notebookId || null,
       isPinned: formData.isPinned,
+      tagIds: formData.tagIds,
     };
 
     updateNoteMutation.mutate(submitData);
@@ -211,8 +183,8 @@ export default function NoteDetailPage() {
       setFormData({
         title: note.title,
         content: note.content || '',
-        notebookId: note.notebookId || '',
         isPinned: note.isPinned,
+        tagIds: note.tags?.map((t) => t.id) || [],
       });
     }
     setIsEditing(false);
@@ -319,35 +291,10 @@ export default function NoteDetailPage() {
                   autoFocus
                 />
 
-                <FormControl fullWidth>
-                  <InputLabel id="notebook-label">Notebook (Optional)</InputLabel>
-                  <Select
-                    labelId="notebook-label"
-                    id="notebook-select"
-                    value={formData.notebookId}
-                    label="Notebook (Optional)"
-                    onChange={handleSelectChange}
-                  >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    {notebooks.map((notebook) => (
-                      <MenuItem key={notebook.id} value={notebook.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box
-                            sx={{
-                              width: 16,
-                              height: 16,
-                              borderRadius: '4px',
-                              bgcolor: notebook.color,
-                            }}
-                          />
-                          {notebook.name}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <TagSelector
+                  value={formData.tagIds}
+                  onChange={(tagIds) => setFormData((prev) => ({ ...prev, tagIds }))}
+                />
 
                 <TextField
                   label="Content"
@@ -404,20 +351,26 @@ export default function NoteDetailPage() {
             </form>
           ) : (
             <Stack spacing={2}>
-              <Box display="flex" alignItems="center" gap={2}>
-                {note.notebookId && (
-                  <Box
-                    sx={{
-                      px: 1.5,
-                      py: 0.5,
-                      borderRadius: 1,
-                      bgcolor: 'primary.50',
-                      color: 'primary.main',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                    }}
-                  >
-                    {notebooks.find((n) => n.id === note.notebookId)?.name || 'Notebook'}
+              <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+                {note.tags && note.tags.length > 0 && (
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    {note.tags.map((tag) => (
+                      <Box
+                        key={tag.id}
+                        component="span"
+                        sx={{
+                          px: 1,
+                          py: 0.25,
+                          borderRadius: 1,
+                          bgcolor: tag.color || '#1976d2',
+                          color: 'white',
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {tag.name}
+                      </Box>
+                    ))}
                   </Box>
                 )}
                 {note.isPinned && (

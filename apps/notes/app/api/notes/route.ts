@@ -3,7 +3,7 @@ import { getUserAuth } from '@vorklee2/core-auth';
 import { checkSubscription } from '@vorklee2/core-billing';
 import { recordAudit, createAuditEvent } from '@vorklee2/core-audit';
 import { trackFeatureUsage } from '@vorklee2/core-analytics';
-import { getNotes, createNote } from '@/services/notes.service';
+import { getNotes, createNote, addTagsToNote } from '@/services/notes.service';
 import { createNoteSchema } from '@/lib/validations/notes';
 import {
   successListResponse,
@@ -34,9 +34,11 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
     const includeArchived = searchParams.get('includeArchived') === 'true';
+    const tagIdsParam = searchParams.get('tagIds');
+    const tagIds = tagIdsParam ? tagIdsParam.split(',').filter(Boolean) : undefined;
 
     // Fetch notes with pagination
-    const result = await getNotes(orgId, includeArchived, { page, limit });
+    const result = await getNotes(orgId, includeArchived, { page, limit, tagIds });
 
     if (!skipAuth) {
       // Track feature usage
@@ -78,9 +80,17 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json();
     const validatedData = createNoteSchema.parse(body);
+    
+    // Extract tagIds before creating note (not part of note schema)
+    const { tagIds, ...noteData } = validatedData;
 
     // Create note
-    const note = await createNote(validatedData, orgId, userId);
+    const note = await createNote(noteData, orgId, userId);
+
+    // Add tags if provided
+    if (tagIds && tagIds.length > 0) {
+      await addTagsToNote(note.id, tagIds);
+    }
 
     if (!skipAuth) {
       // Record audit event

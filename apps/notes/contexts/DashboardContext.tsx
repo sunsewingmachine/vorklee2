@@ -6,8 +6,6 @@ import { ViewModeToggle, type ViewState } from '@/components/explorer/ViewModeTo
 interface DashboardContextValue {
   viewState: ViewState;
   setViewState: (state: ViewState) => void;
-  onCreateNotebook: (() => void) | null;
-  setOnCreateNotebook: (handler: (() => void) | null) => void;
 }
 
 const DashboardContext = createContext<DashboardContextValue | undefined>(undefined);
@@ -17,15 +15,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     mode: 'tree',
     filter: 'combined',
   });
-  const [onCreateNotebook, setOnCreateNotebook] = useState<(() => void) | null>(null);
 
   return (
     <DashboardContext.Provider
       value={{
         viewState,
         setViewState,
-        onCreateNotebook,
-        setOnCreateNotebook,
       }}
     >
       {children}

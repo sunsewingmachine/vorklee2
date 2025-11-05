@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Box,
@@ -12,11 +13,12 @@ import {
   Paper,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import { CreateTagDialog } from '@/components/tags/CreateTagDialog';
 
 interface Tag {
   id: string;
   name: string;
-  color: string;
+  color: string | null;
   createdAt: string;
 }
 
@@ -30,6 +32,7 @@ async function fetchTags(): Promise<Tag[]> {
 }
 
 export default function TagsPage() {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { data: tags, isLoading, error } = useQuery({
     queryKey: ['tags'],
     queryFn: fetchTags,
@@ -57,7 +60,11 @@ export default function TagsPage() {
         <Typography variant="h4" component="h1">
           Tags
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />}>
+        <Button 
+          variant="contained" 
+          startIcon={<AddIcon />}
+          onClick={() => setCreateDialogOpen(true)}
+        >
           New Tag
         </Button>
       </Box>
@@ -70,7 +77,11 @@ export default function TagsPage() {
           <Typography variant="body2" color="text.secondary" paragraph>
             Create tags to categorize your notes
           </Typography>
-          <Button variant="contained" startIcon={<AddIcon />}>
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />}
+            onClick={() => setCreateDialogOpen(true)}
+          >
             Create Tag
           </Button>
         </Paper>
@@ -80,7 +91,15 @@ export default function TagsPage() {
             <Chip
               key={tag.id}
               label={tag.name}
-              sx={{ bgcolor: tag.color, color: 'white', fontWeight: 500 }}
+              sx={{ 
+                bgcolor: tag.color || '#1976d2', 
+                color: 'white', 
+                fontWeight: 500,
+                '&:hover': {
+                  opacity: 0.8,
+                  cursor: 'pointer',
+                },
+              }}
               onClick={() => {
                 // Navigate to notes with this tag
               }}
@@ -88,6 +107,11 @@ export default function TagsPage() {
           ))}
         </Stack>
       )}
+
+      <CreateTagDialog 
+        open={createDialogOpen} 
+        onClose={() => setCreateDialogOpen(false)} 
+      />
     </Box>
   );
 }

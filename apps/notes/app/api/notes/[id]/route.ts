@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { getUserAuth } from '@vorklee2/core-auth';
 import { checkSubscription } from '@vorklee2/core-billing';
 import { recordAudit, createAuditEvent } from '@vorklee2/core-audit';
-import { getNoteById, updateNote, deleteNote } from '@/services/notes.service';
+import { getNoteById, updateNote, deleteNote, replaceTagsForNote } from '@/services/notes.service';
 import { updateNoteSchema } from '@/lib/validations/notes';
 import { successResponse, errorResponse, createError } from '@/lib/api-response';
 
@@ -63,12 +63,20 @@ export async function PATCH(
     // Parse and validate request body
     const body = await request.json();
     const validatedData = updateNoteSchema.parse(body);
+    
+    // Extract tagIds before updating note (not part of note schema)
+    const { tagIds, ...noteData } = validatedData;
 
     // Update note
-    const note = await updateNote(id, validatedData, orgId);
+    const note = await updateNote(id, noteData, orgId);
 
     if (!note) {
       return errorResponse(createError('NOT_FOUND', 'Note not found'), request, 404);
+    }
+
+    // Update tags if provided
+    if (tagIds !== undefined) {
+      await replaceTagsForNote(id, tagIds);
     }
 
     if (!skipAuth) {

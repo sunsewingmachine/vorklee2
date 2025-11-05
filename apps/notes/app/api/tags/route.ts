@@ -22,7 +22,7 @@ export async function GET() {
     // Fetch tags
     const tagsList = await getTags(orgId);
 
-    return NextResponse.json({ tags: tagsList });
+    return NextResponse.json({ data: tagsList });
   } catch (error) {
     console.error('Get tags error:', error);
     return NextResponse.json(
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ tag }, { status: 201 });
+    return NextResponse.json({ data: tag }, { status: 201 });
   } catch (error) {
     console.error('Create tag error:', error);
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   Container,
@@ -12,10 +12,6 @@ import {
   CardContent,
   Typography,
   Stack,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   FormControlLabel,
   Checkbox,
   Alert,
@@ -23,24 +19,8 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { TagSelector } from '@/components/tags/TagSelector';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Cancel';
-
-interface Notebook {
-  id: string;
-  name: string;
-  color: string;
-}
-
-async function fetchNotebooks(): Promise<Notebook[]> {
-  const response = await fetch('/api/notebooks');
-  if (!response.ok) {
-    throw new Error('Failed to fetch notebooks');
-  }
-  const json = await response.json();
-  return json.data;
-}
 
 export default function NewNotePage() {
   const router = useRouter();
@@ -48,17 +28,11 @@ export default function NewNotePage() {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-    notebookId: '',
     isPinned: false,
+    tagIds: [] as string[],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Fetch notebooks for dropdown
-  const { data: notebooks = [] } = useQuery({
-    queryKey: ['notebooks'],
-    queryFn: fetchNotebooks,
-  });
 
   // Create note mutation
   const createNoteMutation = useMutation({
@@ -100,13 +74,6 @@ export default function NewNotePage() {
     }
   };
 
-  const handleSelectChange = (e: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      notebookId: e.target.value,
-    }));
-  };
-
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -130,8 +97,8 @@ export default function NewNotePage() {
     const submitData = {
       title: formData.title,
       content: formData.content || undefined,
-      notebookId: formData.notebookId || undefined,
       isPinned: formData.isPinned,
+      tagIds: formData.tagIds.length > 0 ? formData.tagIds : undefined,
     };
 
     createNoteMutation.mutate(submitData);
@@ -188,36 +155,11 @@ export default function NewNotePage() {
                 }}
               />
 
-              {/* Notebook Selection */}
-              <FormControl fullWidth>
-                <InputLabel id="notebook-label">Notebook (Optional)</InputLabel>
-                <Select
-                  labelId="notebook-label"
-                  id="notebook-select"
-                  value={formData.notebookId}
-                  label="Notebook (Optional)"
-                  onChange={handleSelectChange}
-                >
-                  <MenuItem value="">
-                    <em>None</em>
-                  </MenuItem>
-                  {notebooks.map((notebook) => (
-                    <MenuItem key={notebook.id} value={notebook.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box
-                          sx={{
-                            width: 16,
-                            height: 16,
-                            borderRadius: '4px',
-                            bgcolor: notebook.color,
-                          }}
-                        />
-                        {notebook.name}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {/* Tags Selection */}
+              <TagSelector
+                value={formData.tagIds}
+                onChange={(tagIds) => setFormData((prev) => ({ ...prev, tagIds }))}
+              />
 
               {/* Content Field */}
               <TextField
