@@ -2,26 +2,24 @@
 
 import React, { useState } from 'react';
 import {
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Collapse,
   Box,
   IconButton,
   Menu,
   MenuItem,
   Typography,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  List,
+  ListItem,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import NoteIcon from '@mui/icons-material/Note';
-import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import Link from 'next/link';
+import { SimpleTreeView, TreeItem } from '@mui/x-tree-view';
 import { useTranslation } from '@/components/i18n/useTranslation';
 import type { NotebookWithChildren } from '@/services/notebooks.service';
 import type { ViewFilter } from './ViewFilterBar';
@@ -37,55 +35,32 @@ interface Note {
   updatedAt: Date | string | null;
 }
 
-interface ExplorerTreeItemProps {
+interface NotebookTreeItemContentProps {
   notebook: NotebookWithChildren;
   notes: Note[];
-  level?: number;
+  isExpanded: boolean;
+  isSelected: boolean;
   viewFilter: ViewFilter;
   onSelect?: (notebookId: string) => void;
   onEdit?: (notebookId: string) => void;
   onDelete?: (notebookId: string) => void;
   onCreateSubFolder?: (parentId: string) => void;
-  selectedId?: string;
-  isLastChild?: boolean;
-  expandedFolders: Set<string>;
-  onToggleExpand: (notebookId: string) => void;
 }
 
-function ExplorerTreeItem({
+function NotebookTreeItemContent({
   notebook,
   notes,
-  level = 0,
+  isExpanded,
+  isSelected,
   viewFilter,
   onSelect,
   onEdit,
   onDelete,
   onCreateSubFolder,
-  selectedId,
-  isLastChild = false,
-  expandedFolders,
-  onToggleExpand,
-}: ExplorerTreeItemProps) {
+}: NotebookTreeItemContentProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const { t, isRTL } = useTranslation();
-
-  const hasChildren = notebook.children && notebook.children.length > 0;
-  const folderNotes = notes.filter(note => note.notebookId === notebook.id);
-  const hasNotes = folderNotes.length > 0;
-  const isExpanded = expandedFolders.has(notebook.id);
-  const isSelected = selectedId === notebook.id;
+  const { t } = useTranslation();
   const isMenuOpen = Boolean(anchorEl);
-  const indentSize = 20;
-  const iconButtonSize = 24;
-  const iconButtonCenter = iconButtonSize / 2;
-  const listItemButtonPaddingX = 8;
-  const spacerWidth = 24;
-  const spacerMargin = 8;
-
-  const handleToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onToggleExpand(notebook.id);
-  };
 
   const handleClick = () => {
     onSelect?.(notebook.id);
@@ -115,159 +90,74 @@ function ExplorerTreeItem({
     onCreateSubFolder?.(notebook.id);
   };
 
-  const shouldShowFolder = viewFilter === 'folders' || viewFilter === 'combined';
-  const shouldShowNotes = viewFilter === 'tasks' || viewFilter === 'combined';
-
-  if (!shouldShowFolder) {
-    return null;
-  }
-
   return (
     <>
-      <ListItem
-        disablePadding
-        dense
+      <Box
+        onClick={handleClick}
         sx={{
-          pl: isRTL ? 0 : `${level * indentSize}px`,
-          pr: isRTL ? `${level * indentSize}px` : 0,
+          display: 'flex',
+          alignItems: 'center',
+          width: '100%',
+          px: 1,
           py: 0.25,
-          position: 'relative',
+          borderRadius: 1,
+          bgcolor: isSelected || isMenuOpen ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+          '&:hover': {
+            bgcolor: isSelected || isMenuOpen ? 'rgba(25, 118, 210, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+          },
+          cursor: 'pointer',
+          minHeight: 28,
         }}
       >
-        {/* Tree lines */}
-        {level > 0 && (
-          <>
-            <Box
-              sx={{
-                position: 'absolute',
-                left: isRTL ? 'auto' : `${(level - 1) * indentSize + listItemButtonPaddingX + iconButtonCenter - 0.5}px`,
-                right: isRTL ? `${(level - 1) * indentSize + listItemButtonPaddingX + iconButtonCenter - 0.5}px` : 'auto',
-                top: 0,
-                bottom: isLastChild ? '50%' : 0,
-                width: '1px',
-                bgcolor: 'rgba(0, 0, 0, 0.25)',
-                zIndex: 0,
-              }}
-            />
-            <Box
-              sx={{
-                position: 'absolute',
-                left: isRTL ? 'auto' : `${(level - 1) * indentSize + listItemButtonPaddingX + iconButtonCenter - 0.5}px`,
-                right: isRTL ? `${(level - 1) * indentSize + listItemButtonPaddingX + iconButtonCenter - 0.5}px` : 'auto',
-                top: '50%',
-                width: hasChildren || hasNotes
-                  ? `${indentSize - iconButtonCenter + 0.5}px`
-                  : `${indentSize - iconButtonCenter + spacerWidth + spacerMargin}px`,
-                height: '1px',
-                bgcolor: 'rgba(0, 0, 0, 0.25)',
-                zIndex: 0,
-              }}
-            />
-          </>
-        )}
-        {(hasChildren || hasNotes) && (
-          <Box
-            sx={{
-              position: 'absolute',
-              left: isRTL ? 'auto' : `${level * indentSize + listItemButtonPaddingX + iconButtonCenter - 0.5}px`,
-              right: isRTL ? `${level * indentSize + listItemButtonPaddingX + iconButtonCenter - 0.5}px` : 'auto',
-              top: '50%',
-              bottom: isLastChild ? '50%' : 0,
-              width: '1px',
-              bgcolor: 'rgba(0, 0, 0, 0.25)',
-              zIndex: 0,
-            }}
-          />
-        )}
-        <ListItemButton
-          onClick={handleClick}
-          selected={isSelected || isMenuOpen}
-          dense
-          sx={{
-            borderRadius: 1,
-            py: 0.5,
-            px: 1,
-            position: 'relative',
-            zIndex: 1,
-            minHeight: 36,
-            '&.Mui-selected': {
-              bgcolor: 'rgba(25, 118, 210, 0.08)',
-              color: 'text.primary',
-              '&:hover': {
-                bgcolor: 'rgba(25, 118, 210, 0.12)',
-              },
-            },
-            '&:hover': {
-              bgcolor: 'rgba(0, 0, 0, 0.04)',
-            },
-          }}
-        >
-          {(hasChildren || hasNotes) && (
-            <IconButton
-              size="small"
-              onClick={handleToggle}
-              sx={{
-                mr: 1,
-                minWidth: 24,
-                width: 24,
-                height: 24,
-                p: 0.5,
-                border: '1px solid rgba(0, 0, 0, 0.12)',
-                borderRadius: '4px',
-                bgcolor: 'background.paper',
-                '&:hover': {
-                  bgcolor: 'action.hover',
-                  borderColor: 'rgba(0, 0, 0, 0.23)',
-                },
-              }}
-              aria-label={isExpanded ? 'Collapse' : 'Expand'}
-              aria-expanded={isExpanded}
-            >
-              {isExpanded ? <RemoveIcon fontSize="small" /> : <AddIcon fontSize="small" />}
-            </IconButton>
+        <ListItemIcon sx={{ minWidth: 28, mr: 1 }}>
+          {isExpanded ? (
+            <FolderOpenIcon sx={{ color: notebook.color || 'primary.main', fontSize: 18 }} />
+          ) : (
+            <FolderIcon sx={{ color: notebook.color || 'primary.main', fontSize: 18 }} />
           )}
-          {!(hasChildren || hasNotes) && <Box sx={{ width: 24, mr: 1 }} />}
+        </ListItemIcon>
 
-          <ListItemIcon sx={{ minWidth: 36 }}>
-            {isExpanded ? (
-              <FolderOpenIcon sx={{ color: notebook.color || 'primary.main', fontSize: 20 }} />
-            ) : (
-              <FolderIcon sx={{ color: notebook.color || 'primary.main', fontSize: 20 }} />
-            )}
-          </ListItemIcon>
-
-          <ListItemText
-            primary={notebook.name}
-            secondary={notebook.description}
-            primaryTypographyProps={{
-              sx: {
-                fontWeight: isSelected ? 600 : 400,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                fontSize: '0.95rem',
-                lineHeight: 1.4,
-              },
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: isSelected ? 600 : 400,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              fontSize: '0.875rem',
+              lineHeight: 1.4,
             }}
-            secondaryTypographyProps={{
-              sx: {
+          >
+            {notebook.name}
+          </Typography>
+          {notebook.description && (
+            <Typography
+              variant="caption"
+              sx={{
                 fontSize: '0.75rem',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                mt: 0.25,
-              },
-            }}
-          />
+                whiteSpace: 'nowrap',
+                display: 'block',
+                color: 'text.secondary',
+                mt: 0.125,
+              }}
+            >
+              {notebook.description}
+            </Typography>
+          )}
+        </Box>
 
-          <IconButton
-            size="small"
-            onClick={handleMenuOpen}
-            sx={{ ml: 1, p: 0.5 }}
-            aria-label="More options"
-          >
-            <MoreVertIcon fontSize="small" />
-          </IconButton>
-        </ListItemButton>
-      </ListItem>
+        <IconButton
+          size="small"
+          onClick={handleMenuOpen}
+          sx={{ ml: 0.5, p: 0.25, minWidth: 24, width: 24, height: 24 }}
+          aria-label="More options"
+        >
+          <MoreVertIcon fontSize="small" />
+        </IconButton>
+      </Box>
 
       <Menu
         anchorEl={anchorEl}
@@ -280,80 +170,135 @@ function ExplorerTreeItem({
         <MenuItem onClick={handleCreateSubFolder}>Create Subfolder</MenuItem>
         <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>Delete</MenuItem>
       </Menu>
-
-      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-        <Box component="div" role="group" sx={{ pl: isRTL ? 0 : `${(level + 1) * indentSize}px`, pr: isRTL ? `${(level + 1) * indentSize}px` : 0 }}>
-          {/* Render notes within this folder */}
-          {shouldShowNotes && folderNotes.map((note) => (
-            <ListItem
-              key={note.id}
-              disablePadding
-              dense
-              sx={{ py: 0.25 }}
-            >
-              <ListItemButton
-                component={Link}
-                href={`/dashboard/notes/${note.id}`}
-                dense
-                sx={{
-                  borderRadius: 1,
-                  py: 0.5,
-                  px: 1,
-                  minHeight: 32,
-                  '&:hover': {
-                    bgcolor: 'rgba(0, 0, 0, 0.04)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 32 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {note.isPinned && <PushPinIcon fontSize="small" color="primary" sx={{ fontSize: 14 }} />}
-                    <NoteIcon fontSize="small" sx={{ fontSize: 18 }} />
-                  </Box>
-                </ListItemIcon>
-                <ListItemText
-                  primary={note.title || 'Untitled Note'}
-                  secondary={note.content ? note.content.substring(0, 50) + '...' : 'No content'}
-                  primaryTypographyProps={{
-                    sx: {
-                      fontSize: '0.875rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    },
-                  }}
-                  secondaryTypographyProps={{
-                    sx: {
-                      fontSize: '0.75rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    },
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
-          
-          {/* Render child notebooks */}
-          {notebook.children?.map((child, index) => (
-            <ExplorerTreeItem
-              key={child.id}
-              notebook={child}
-              notes={notes}
-              level={level + 1}
-              viewFilter={viewFilter}
-              onSelect={onSelect}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onCreateSubFolder={onCreateSubFolder}
-              selectedId={selectedId}
-              isLastChild={index === notebook.children!.length - 1}
-              expandedFolders={expandedFolders}
-              onToggleExpand={onToggleExpand}
-            />
-          ))}
-        </Box>
-      </Collapse>
     </>
+  );
+}
+
+interface NoteTreeItemContentProps {
+  note: Note;
+}
+
+function NoteTreeItemContent({ note }: NoteTreeItemContentProps) {
+  return (
+    <ListItemButton
+      component={Link}
+      href={`/dashboard/notes/${note.id}`}
+      dense
+      sx={{
+        borderRadius: 1,
+        py: 0.25,
+        px: 1,
+        minHeight: 24,
+        '&:hover': {
+          bgcolor: 'rgba(0, 0, 0, 0.04)',
+        },
+      }}
+    >
+      <ListItemIcon sx={{ minWidth: 28 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {note.isPinned && <PushPinIcon fontSize="small" color="primary" sx={{ fontSize: 12 }} />}
+          <NoteIcon fontSize="small" sx={{ fontSize: 16 }} />
+        </Box>
+      </ListItemIcon>
+      <ListItemText
+        primary={note.title || 'Untitled Note'}
+        secondary={note.content ? note.content.substring(0, 40) + '...' : 'No content'}
+        primaryTypographyProps={{
+          sx: {
+            fontSize: '0.8125rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          },
+        }}
+        secondaryTypographyProps={{
+          sx: {
+            fontSize: '0.6875rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          },
+        }}
+      />
+    </ListItemButton>
+  );
+}
+
+interface ExplorerTreeItemProps {
+  notebook: NotebookWithChildren;
+  notes: Note[];
+  viewFilter: ViewFilter;
+  onSelect?: (notebookId: string) => void;
+  onEdit?: (notebookId: string) => void;
+  onDelete?: (notebookId: string) => void;
+  onCreateSubFolder?: (parentId: string) => void;
+  selectedId?: string;
+  expandedItems: string[];
+}
+
+function ExplorerTreeItem({
+  notebook,
+  notes,
+  viewFilter,
+  onSelect,
+  onEdit,
+  onDelete,
+  onCreateSubFolder,
+  selectedId,
+  expandedItems,
+}: ExplorerTreeItemProps) {
+  const folderNotes = notes.filter(note => note.notebookId === notebook.id);
+  const isExpanded = expandedItems.includes(notebook.id);
+  const isSelected = selectedId === notebook.id;
+  const shouldShowFolder = viewFilter === 'folders' || viewFilter === 'combined';
+  const shouldShowNotes = viewFilter === 'tasks' || viewFilter === 'combined';
+
+  if (!shouldShowFolder) {
+    return null;
+  }
+
+  return (
+    <TreeItem
+      itemId={notebook.id}
+      label={
+        <NotebookTreeItemContent
+          notebook={notebook}
+          notes={notes}
+          isExpanded={isExpanded}
+          isSelected={isSelected}
+          viewFilter={viewFilter}
+          onSelect={onSelect}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onCreateSubFolder={onCreateSubFolder}
+        />
+      }
+    >
+      {/* Render notes within this folder */}
+      {shouldShowNotes && folderNotes.map((note) => (
+        <TreeItem
+          key={`note-${note.id}`}
+          itemId={`note-${note.id}`}
+          label={<NoteTreeItemContent note={note} />}
+        />
+      ))}
+      
+      {/* Render child notebooks */}
+      {notebook.children?.map((child) => (
+        <ExplorerTreeItem
+          key={child.id}
+          notebook={child}
+          notes={notes}
+          viewFilter={viewFilter}
+          onSelect={onSelect}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onCreateSubFolder={onCreateSubFolder}
+          selectedId={selectedId}
+          expandedItems={expandedItems}
+        />
+      ))}
+    </TreeItem>
   );
 }
 
@@ -384,56 +329,123 @@ export function ExplorerTreeView({
 }: ExplorerTreeViewProps) {
   const rootNotes = notes.filter(note => !note.notebookId);
   const shouldShowNotes = viewFilter === 'tasks' || viewFilter === 'combined';
+  const expandedItems = Array.from(expandedFolders);
+
+  const handleExpandedItemsChange = (
+    event: React.SyntheticEvent | null,
+    itemIds: string[]
+  ) => {
+    // Filter out note items (they start with 'note-')
+    const notebookIds = itemIds.filter(id => !id.startsWith('note-'));
+    const newExpandedSet = new Set(notebookIds);
+    
+    // Find items that were expanded or collapsed
+    const currentExpandedSet = new Set(expandedFolders);
+    
+    // Items that were collapsed
+    currentExpandedSet.forEach((id) => {
+      if (!newExpandedSet.has(id)) {
+        onToggleExpand(id);
+      }
+    });
+    
+    // Items that were expanded
+    newExpandedSet.forEach((id) => {
+      if (!currentExpandedSet.has(id)) {
+        onToggleExpand(id);
+      }
+    });
+  };
 
   return (
-    <List component="nav" dense sx={{ py: 0 }}>
+    <>
       {/* Show root-level notes if no notebook */}
-      {shouldShowNotes && rootNotes.map((note) => (
-        <ListItem key={note.id} disablePadding dense sx={{ py: 0.25 }}>
-          <ListItemButton
-            component={Link}
-            href={`/dashboard/notes/${note.id}`}
-            dense
-            sx={{
-              borderRadius: 1,
-              py: 0.5,
-              px: 1,
-              minHeight: 32,
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 32 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                {note.isPinned && <PushPinIcon fontSize="small" color="primary" sx={{ fontSize: 14 }} />}
-                <NoteIcon fontSize="small" sx={{ fontSize: 18 }} />
-              </Box>
-            </ListItemIcon>
-            <ListItemText
-              primary={note.title || 'Untitled Note'}
-              secondary={note.content ? note.content.substring(0, 50) + '...' : 'No content'}
-            />
-          </ListItemButton>
-        </ListItem>
-      ))}
+      {shouldShowNotes && rootNotes.length > 0 && (
+        <List component="nav" dense sx={{ py: 0 }}>
+          {rootNotes.map((note) => (
+            <ListItem key={note.id} disablePadding dense sx={{ py: 0.25 }}>
+              <ListItemButton
+                component={Link}
+                href={`/dashboard/notes/${note.id}`}
+                dense
+                sx={{
+                  borderRadius: 1,
+                  py: 0.5,
+                  px: 1,
+                  minHeight: 32,
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 32 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {note.isPinned && <PushPinIcon fontSize="small" color="primary" sx={{ fontSize: 14 }} />}
+                    <NoteIcon fontSize="small" sx={{ fontSize: 18 }} />
+                  </Box>
+                </ListItemIcon>
+                <ListItemText
+                  primary={note.title || 'Untitled Note'}
+                  secondary={note.content ? note.content.substring(0, 50) + '...' : 'No content'}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      )}
       
-      {/* Render notebook tree */}
-      {notebooks.map((notebook, index) => (
-        <ExplorerTreeItem
-          key={notebook.id}
-          notebook={notebook}
-          notes={notes}
-          level={0}
-          viewFilter={viewFilter}
-          onSelect={onSelect}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onCreateSubFolder={onCreateSubFolder}
-          selectedId={selectedId}
-          isLastChild={index === notebooks.length - 1}
-          expandedFolders={expandedFolders}
-          onToggleExpand={onToggleExpand}
-        />
-      ))}
-    </List>
+      {/* Render notebook tree using SimpleTreeView */}
+      <SimpleTreeView
+        expandedItems={expandedItems}
+        onExpandedItemsChange={handleExpandedItemsChange}
+        sx={{
+          flexGrow: 1,
+          py: 0,
+          // Compact styling
+          '& .MuiTreeItem-content': {
+            padding: '2px 4px',
+            minHeight: 28,
+            borderRadius: '4px',
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+            },
+            '&.Mui-selected': {
+              backgroundColor: 'rgba(25, 118, 210, 0.08)',
+              '&:hover': {
+                backgroundColor: 'rgba(25, 118, 210, 0.12)',
+              },
+            },
+          },
+          '& .MuiTreeItem-label': {
+            fontSize: '0.875rem',
+            padding: 0,
+          },
+          '& .MuiTreeItem-iconContainer': {
+            width: 20,
+            marginRight: 1,
+            '& svg': {
+              fontSize: '1rem',
+            },
+          },
+          '& .MuiTreeItem-group': {
+            marginLeft: '16px',
+            paddingLeft: '8px',
+            borderLeft: '1px solid rgba(0, 0, 0, 0.12)',
+          },
+        }}
+      >
+        {notebooks.map((notebook) => (
+          <ExplorerTreeItem
+            key={notebook.id}
+            notebook={notebook}
+            notes={notes}
+            viewFilter={viewFilter}
+            onSelect={onSelect}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onCreateSubFolder={onCreateSubFolder}
+            selectedId={selectedId}
+            expandedItems={expandedItems}
+          />
+        ))}
+      </SimpleTreeView>
+    </>
   );
 }
-
