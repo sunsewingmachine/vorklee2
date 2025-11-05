@@ -77,24 +77,6 @@ export function CreateNotebookDialog({
     }
   }, [parentId, open]);
 
-  // Flatten notebooks for parent selection
-  const flattenNotebooks = (
-    notebooks: NotebookWithChildren[],
-    level = 0
-  ): Array<NotebookWithChildren & { displayName: string }> => {
-    const result: Array<NotebookWithChildren & { displayName: string }> = [];
-    notebooks.forEach((notebook) => {
-      const indent = '  '.repeat(level);
-      result.push({
-        ...notebook,
-        displayName: `${indent}${notebook.name}`,
-      });
-      if (notebook.children && notebook.children.length > 0) {
-        result.push(...flattenNotebooks(notebook.children, level + 1));
-      }
-    });
-    return result;
-  };
 
   const createNotebookMutation = useMutation({
     mutationFn: async (data: {
@@ -148,12 +130,6 @@ export function CreateNotebookDialog({
     }
   };
 
-  const handleSelectChange = (e: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      parentId: e.target.value || null,
-    }));
-  };
 
   const handleClose = () => {
     setFormData({
@@ -181,9 +157,8 @@ export function CreateNotebookDialog({
       return;
     }
 
-    // Use parentId prop if provided (for subfolder creation), otherwise use formData.parentId
-    // If parentId prop is provided, it means we're creating a subfolder, so use it
-    const finalParentId = parentId ? parentId : (formData.parentId || null);
+    // Use parentId prop if provided (for subfolder creation), otherwise create at root level
+    const finalParentId = parentId || null;
 
     createNotebookMutation.mutate({
       name: formData.name.trim(),
@@ -192,8 +167,6 @@ export function CreateNotebookDialog({
       parentId: finalParentId,
     });
   };
-
-  const flatNotebooks = flattenNotebooks(notebooks);
 
   // Get parent folder path when creating subfolder
   const getParentPath = (): string[] => {
@@ -279,39 +252,6 @@ export function CreateNotebookDialog({
               inputProps={{ maxLength: 500 }}
             />
 
-            {!parentId && flatNotebooks.length > 0 && (
-              <FormControl fullWidth>
-                <InputLabel id="parent-label">
-                  {t('notebooks.menu.hierarchy.parent')} (Optional)
-                </InputLabel>
-                <Select
-                  labelId="parent-label"
-                  id="parent-select"
-                  value={formData.parentId}
-                  label={t('notebooks.menu.hierarchy.parent') + ' (Optional)'}
-                  onChange={handleSelectChange}
-                >
-                  <MenuItem value="">
-                    <em>None (Root level)</em>
-                  </MenuItem>
-                  {flatNotebooks.map((notebook) => (
-                    <MenuItem key={notebook.id} value={notebook.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box
-                          sx={{
-                            width: 12,
-                            height: 12,
-                            borderRadius: '2px',
-                            bgcolor: notebook.color || '#1976d2',
-                          }}
-                        />
-                        <Typography variant="body2">{notebook.displayName}</Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
 
             <FormControl fullWidth>
               <InputLabel id="color-label">Color</InputLabel>
