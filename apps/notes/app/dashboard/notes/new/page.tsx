@@ -86,17 +86,13 @@ export default function NewNotePage() {
             }
           }
           
-          // If view mode is tree, navigate to the note detail page
-          // Otherwise, go to dashboard
-          if (viewState.mode === 'tree') {
-            router.push(`/dashboard/notes/${createdNote.id}`);
-          } else {
-            router.push('/dashboard');
-          }
+          // Always navigate to dashboard with highlight parameter
+          // This shows the tree view with the newly created note highlighted
+          router.push(`/dashboard?highlight=${createdNote.id}&highlightType=note`);
         } catch (error) {
-          // Default to navigating to note detail page
+          // Default to navigating to dashboard with highlight
           console.error('Failed to check view state:', error);
-          router.push(`/dashboard/notes/${createdNote.id}`);
+          router.push(`/dashboard?highlight=${createdNote.id}&highlightType=note`);
         }
       } else {
         router.push('/dashboard');

@@ -57,6 +57,8 @@ interface ExplorerTreeViewProps {
   notes: Note[];
   notebooks: Notebook[];
   viewFilter: ViewFilter;
+  highlightedItemId?: string | null;
+  highlightedItemType?: 'note' | 'folder' | null;
 }
 
 interface TreeNode {
@@ -96,6 +98,10 @@ function FolderItem({
   allNotebooks,
   onDragStart,
   onDragEnd,
+  isHighlighted,
+  itemRef,
+  highlightedItemId,
+  highlightedItemType,
 }: {
   node: TreeNode;
   level: number;
@@ -112,6 +118,10 @@ function FolderItem({
   allNotebooks?: Notebook[];
   onDragStart?: (data: { type: 'folder'; id: string }) => void;
   onDragEnd?: () => void;
+  isHighlighted?: boolean;
+  itemRef?: React.RefObject<HTMLDivElement>;
+  highlightedItemId?: string | null;
+  highlightedItemType?: 'note' | 'folder' | null;
 }) {
   const isExpanded = expandedFolders.has(node.notebook.id);
   const hasChildren = node.children.length > 0 || node.notes.length > 0;
@@ -201,7 +211,7 @@ function FolderItem({
 
   return (
     <>
-      <ListItem disablePadding dense sx={{ py: 0.25 }}>
+      <ListItem disablePadding dense sx={{ py: 0.25 }} ref={itemRef}>
         <ListItemButton
           onClick={handleClick}
           onContextMenu={handleContextMenu}
@@ -219,12 +229,33 @@ function FolderItem({
             minHeight: 32,
             pl: 1 + level * 2,
             opacity: isDragging ? 0.5 : 1,
-            bgcolor: isDragOver ? 'action.hover' : 'transparent',
-            border: isDragOver ? '2px dashed' : '2px solid transparent',
-            borderColor: isDragOver ? 'primary.main' : 'transparent',
+            bgcolor: isHighlighted 
+              ? 'primary.light' 
+              : isDragOver 
+                ? 'action.hover' 
+                : 'transparent',
+            border: isHighlighted 
+              ? '2px solid' 
+              : isDragOver 
+                ? '2px dashed' 
+                : '2px solid transparent',
+            borderColor: isHighlighted 
+              ? 'primary.main' 
+              : isDragOver 
+                ? 'primary.main' 
+                : 'transparent',
             cursor: isDragging ? 'grabbing' : 'grab',
+            animation: isHighlighted ? 'pulse 2s ease-in-out 3' : 'none',
+            '@keyframes pulse': {
+              '0%, 100%': { backgroundColor: 'primary.light' },
+              '50%': { backgroundColor: 'primary.main', opacity: 0.7 },
+            },
             '&:hover': {
-              bgcolor: isDragOver ? 'action.hover' : 'action.hover',
+              bgcolor: isHighlighted 
+                ? 'primary.light' 
+                : isDragOver 
+                  ? 'action.hover' 
+                  : 'action.hover',
             },
           }}
         >
@@ -291,44 +322,60 @@ function FolderItem({
       <Collapse in={isExpanded} timeout="auto" unmountOnExit>
         <List component="div" disablePadding dense>
           {/* Render child folders */}
-          {node.children.map((child) => (
-            <FolderItem
-              key={child.notebook.id}
-              node={child}
-              level={level + 1}
-              expandedFolders={expandedFolders}
-              onToggleFolder={onToggleFolder}
-              viewFilter={viewFilter}
-              onRename={onRename}
-              onDelete={onDelete}
-              onAddTask={onAddTask}
-              onCreateSubfolder={onCreateSubfolder}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-              dragOverFolderId={dragOverFolderId}
-              allNotebooks={allNotebooks}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-            />
-          ))}
-
-          {/* Render notes in this folder */}
-          {shouldShowNotes &&
-            node.notes.map((note) => (
-              <NoteItem
-                key={note.id}
-                note={note}
+          {node.children.map((child) => {
+            const childRef = highlightedItemId === child.notebook.id && highlightedItemType === 'folder'
+              ? highlightedItemRef
+              : undefined;
+            return (
+              <FolderItem
+                key={child.notebook.id}
+                node={child}
                 level={level + 1}
+                expandedFolders={expandedFolders}
+                onToggleFolder={onToggleFolder}
+                viewFilter={viewFilter}
                 onRename={onRename}
                 onDelete={onDelete}
+                onAddTask={onAddTask}
+                onCreateSubfolder={onCreateSubfolder}
                 onDragOver={onDragOver}
                 onDrop={onDrop}
                 dragOverFolderId={dragOverFolderId}
                 allNotebooks={allNotebooks}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
+                isHighlighted={highlightedItemId === child.notebook.id && highlightedItemType === 'folder'}
+                itemRef={childRef}
+                highlightedItemId={highlightedItemId}
+                highlightedItemType={highlightedItemType}
               />
-            ))}
+            );
+          })}
+
+          {/* Render notes in this folder */}
+          {shouldShowNotes &&
+            node.notes.map((note) => {
+              const noteRef = highlightedItemId === note.id && highlightedItemType === 'note' 
+                ? highlightedItemRef 
+                : undefined;
+              return (
+                <NoteItem
+                  key={note.id}
+                  note={note}
+                  level={level + 1}
+                  onRename={onRename}
+                  onDelete={onDelete}
+                  onDragOver={onDragOver}
+                  onDrop={onDrop}
+                  dragOverFolderId={dragOverFolderId}
+                  allNotebooks={allNotebooks}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
+                  isHighlighted={highlightedItemId === note.id && highlightedItemType === 'note'}
+                  itemRef={noteRef}
+                />
+              );
+            })}
         </List>
       </Collapse>
     </>
@@ -346,6 +393,8 @@ function NoteItem({
   allNotebooks,
   onDragStart,
   onDragEnd,
+  isHighlighted,
+  itemRef,
 }: {
   note: Note;
   level: number;
@@ -357,6 +406,8 @@ function NoteItem({
   allNotebooks?: Notebook[];
   onDragStart?: (data: { type: 'note'; id: string }) => void;
   onDragEnd?: () => void;
+  isHighlighted?: boolean;
+  itemRef?: React.RefObject<HTMLDivElement>;
 }) {
   const [contextMenuAnchor, setContextMenuAnchor] = useState<HTMLElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -408,7 +459,7 @@ function NoteItem({
 
   return (
     <>
-      <ListItem disablePadding dense sx={{ py: 0.25 }}>
+      <ListItem disablePadding dense sx={{ py: 0.25 }} ref={itemRef}>
         <ListItemButton
           component={Link}
           href={`/dashboard/notes/${note.id}`}
@@ -425,6 +476,17 @@ function NoteItem({
             pl: 2 + level * 2,
             opacity: isDragging ? 0.5 : 1,
             cursor: isDragging ? 'grabbing' : 'grab',
+            bgcolor: isHighlighted ? 'primary.light' : 'transparent',
+            border: isHighlighted ? '2px solid' : '2px solid transparent',
+            borderColor: isHighlighted ? 'primary.main' : 'transparent',
+            animation: isHighlighted ? 'pulse 2s ease-in-out 3' : 'none',
+            '@keyframes pulse': {
+              '0%, 100%': { backgroundColor: 'primary.light' },
+              '50%': { backgroundColor: 'primary.main', opacity: 0.7 },
+            },
+            '&:hover': {
+              bgcolor: isHighlighted ? 'primary.light' : 'action.hover',
+            },
           }}
         >
           <ListItemIcon sx={{ minWidth: 32 }}>
@@ -531,7 +593,7 @@ function getAncestorFolderIds(notebookId: string, notebooks: Notebook[]): string
   return ancestors;
 }
 
-export function ExplorerTreeView({ notes, notebooks, viewFilter }: ExplorerTreeViewProps) {
+export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItemId, highlightedItemType }: ExplorerTreeViewProps) {
   // Load expanded folders from localStorage on mount
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
@@ -553,6 +615,7 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter }: ExplorerTreeV
   const [draggedItem, setDraggedItem] = useState<{ type: 'note' | 'folder'; id: string } | null>(null);
   const [createSubfolderDialogOpen, setCreateSubfolderDialogOpen] = useState(false);
   const [subfolderParentId, setSubfolderParentId] = useState<string | null>(null);
+  const highlightedItemRef = React.useRef<HTMLDivElement | null>(null);
   const shouldShowFolders = viewFilter === 'folders' || viewFilter === 'combined';
   const shouldShowNotes = viewFilter === 'tasks' || viewFilter === 'combined';
   const queryClient = useQueryClient();
@@ -602,6 +665,16 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter }: ExplorerTreeV
       window.removeEventListener('expand-folders' as any, handleExpandFolders);
     };
   }, [expandFolders]);
+
+  // Scroll to highlighted item when it becomes available
+  useEffect(() => {
+    if (highlightedItemId && highlightedItemRef.current) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        highlightedItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [highlightedItemId, notes, notebooks]);
 
   const handleToggleFolder = (id: string) => {
     setExpandedFolders((prev) => {
@@ -861,44 +934,60 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter }: ExplorerTreeV
       >
         {/* Render folders */}
         {shouldShowFolders &&
-          tree.map((node) => (
-            <FolderItem
-              key={node.notebook.id}
-              node={node}
-              level={0}
-              expandedFolders={expandedFolders}
-              onToggleFolder={handleToggleFolder}
-              viewFilter={viewFilter}
-              onRename={handleRenameNotebook}
-              onDelete={handleDeleteNotebook}
-              onAddTask={handleAddTask}
-              onCreateSubfolder={handleCreateSubfolder}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              dragOverFolderId={dragOverFolderId}
-              allNotebooks={notebooks}
-              onDragStart={(data) => setDraggedItem(data)}
-              onDragEnd={handleGlobalDragEnd}
-            />
-          ))}
+          tree.map((node) => {
+            const folderRef = highlightedItemId === node.notebook.id && highlightedItemType === 'folder'
+              ? highlightedItemRef
+              : undefined;
+            return (
+              <FolderItem
+                key={node.notebook.id}
+                node={node}
+                level={0}
+                expandedFolders={expandedFolders}
+                onToggleFolder={handleToggleFolder}
+                viewFilter={viewFilter}
+                onRename={handleRenameNotebook}
+                onDelete={handleDeleteNotebook}
+                onAddTask={handleAddTask}
+                onCreateSubfolder={handleCreateSubfolder}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                dragOverFolderId={dragOverFolderId}
+                allNotebooks={notebooks}
+                onDragStart={(data) => setDraggedItem(data)}
+                onDragEnd={handleGlobalDragEnd}
+                isHighlighted={highlightedItemId === node.notebook.id && highlightedItemType === 'folder'}
+                itemRef={folderRef}
+                highlightedItemId={highlightedItemId}
+                highlightedItemType={highlightedItemType}
+              />
+            );
+          })}
 
         {/* Render notes without folders */}
         {shouldShowNotes &&
-          rootNotes.map((note) => (
-            <NoteItem
-              key={note.id}
-              note={note}
-              level={0}
-              onRename={handleRenameNote}
-              onDelete={handleDeleteNote}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              dragOverFolderId={dragOverFolderId}
-              allNotebooks={notebooks}
-              onDragStart={(data) => setDraggedItem(data)}
-              onDragEnd={handleGlobalDragEnd}
-            />
-          ))}
+          rootNotes.map((note) => {
+            const noteRef = highlightedItemId === note.id && highlightedItemType === 'note'
+              ? highlightedItemRef
+              : undefined;
+            return (
+              <NoteItem
+                key={note.id}
+                note={note}
+                level={0}
+                onRename={handleRenameNote}
+                onDelete={handleDeleteNote}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                dragOverFolderId={dragOverFolderId}
+                allNotebooks={notebooks}
+                onDragStart={(data) => setDraggedItem(data)}
+                onDragEnd={handleGlobalDragEnd}
+                isHighlighted={highlightedItemId === note.id && highlightedItemType === 'note'}
+                itemRef={noteRef}
+              />
+            );
+          })}
       </List>
       <CreateFolderDialog
         open={createSubfolderDialogOpen}

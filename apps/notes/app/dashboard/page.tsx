@@ -12,8 +12,10 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { NotesExplorer } from '@/components/explorer/NotesExplorer';
 import { useDashboard } from '@/contexts/DashboardContext';
+import { useEffect, useState } from 'react';
 
 interface Note {
   id: string;
@@ -67,6 +69,35 @@ async function fetchNotebooks(): Promise<Notebook[]> {
 
 export default function DashboardPage() {
   const { viewState, selectedTagIds } = useDashboard();
+  const searchParams = useSearchParams();
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+  const [highlightedItemType, setHighlightedItemType] = useState<'note' | 'folder' | null>(null);
+
+  // Get highlight params from URL
+  useEffect(() => {
+    const highlightId = searchParams.get('highlight');
+    const highlightType = searchParams.get('highlightType') as 'note' | 'folder' | null;
+    
+    if (highlightId && highlightType) {
+      setHighlightedItemId(highlightId);
+      setHighlightedItemType(highlightType);
+      
+      // Clear highlight after 3 seconds
+      const timer = setTimeout(() => {
+        setHighlightedItemId(null);
+        setHighlightedItemType(null);
+        // Remove from URL without page reload
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('highlight');
+          url.searchParams.delete('highlightType');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   const { data: notes, isLoading: notesLoading, error: notesError } = useQuery({
     queryKey: ['notes', selectedTagIds],
@@ -128,6 +159,8 @@ export default function DashboardPage() {
           notebooks={notebooks || []}
           viewFilter={viewState.filter}
           viewMode={viewState.mode}
+          highlightedItemId={highlightedItemId}
+          highlightedItemType={highlightedItemType}
         />
       )}
     </Box>

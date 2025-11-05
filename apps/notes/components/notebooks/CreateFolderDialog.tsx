@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogTitle,
@@ -28,6 +29,7 @@ interface CreateFolderDialogProps {
 
 export function CreateFolderDialog({ open, onClose, parentId }: CreateFolderDialogProps) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -111,6 +113,9 @@ export function CreateFolderDialog({ open, onClose, parentId }: CreateFolderDial
             detail: { folderIds: folderIdsToExpand }
           }));
         }
+        
+        // Navigate to dashboard with highlight parameter
+        router.push(`/dashboard?highlight=${createdFolder.id}&highlightType=folder`);
       }
       
       handleClose();

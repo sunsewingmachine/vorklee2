@@ -42,6 +42,8 @@ interface NotesExplorerProps {
   notebooks: Notebook[];
   viewFilter: ViewFilter;
   viewMode: ViewMode;
+  highlightedItemId?: string | null;
+  highlightedItemType?: 'note' | 'folder' | null;
 }
 
 export function NotesExplorer({
@@ -49,6 +51,8 @@ export function NotesExplorer({
   notebooks,
   viewFilter,
   viewMode,
+  highlightedItemId,
+  highlightedItemType,
 }: NotesExplorerProps) {
   const renderView = () => {
     switch (viewMode) {
@@ -60,6 +64,8 @@ export function NotesExplorer({
                 notes={notes}
                 notebooks={notebooks}
                 viewFilter={viewFilter}
+                highlightedItemId={highlightedItemId}
+                highlightedItemType={highlightedItemType}
               />
             </CardContent>
           </Card>
