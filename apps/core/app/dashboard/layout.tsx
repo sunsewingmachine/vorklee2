@@ -245,6 +245,12 @@ function UnifiedDashboardLayoutInner({
               toggleAppExpansion(appKey);
             }
           };
+
+          const handleToggleClick = (e: React.MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleAppExpansion(appKey);
+          };
           
           return (
             <Box key={appKey}>
@@ -263,7 +269,20 @@ function UnifiedDashboardLayoutInner({
                 >
                   <ListItemIcon sx={{ color: '#90caf9' }}>{app.icon}</ListItemIcon>
                   <ListItemText primary={app.label} sx={{ '& .MuiTypography-root': { fontWeight: mainHref && isActive(mainHref) ? 600 : 600 } }} />
-                  <Typography sx={{ color: '#90caf9', fontSize: '1.2rem', fontWeight: 'bold', ml: 1 }}>
+                  <Typography 
+                    onClick={handleToggleClick}
+                    sx={{ 
+                      color: '#90caf9', 
+                      fontSize: '1.2rem', 
+                      fontWeight: 'bold', 
+                      ml: 1,
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': {
+                        opacity: 0.8,
+                      }
+                    }}
+                  >
                     {expandedApps[appKey] ? '−' : '+'}
                   </Typography>
                 </ListItemButton>
