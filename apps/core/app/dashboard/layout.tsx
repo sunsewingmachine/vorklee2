@@ -3,7 +3,7 @@
 import { Box, AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemIcon, ListItemText, ListItemButton, Divider, Collapse } from '@mui/material';
 import { useState, createContext, useContext } from 'react';
 import MenuIcon from '@mui/icons-material/Menu';
-import NoteIcon from '@mui/icons-material/Note';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -41,7 +41,7 @@ type AppMenu = {
 const appMenus: Record<string, AppMenu> = {
   notes: {
     label: 'Notes',
-    icon: <NoteIcon />,
+    icon: <ListAltIcon />,
     mainHref: `${NOTES_APP_URL}/dashboard`,
     items: [
       { text: 'Tags', icon: <LocalOfferIcon />, href: `${NOTES_APP_URL}/dashboard/tags`, isExternal: true },

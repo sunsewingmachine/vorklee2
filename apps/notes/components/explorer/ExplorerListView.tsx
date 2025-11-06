@@ -14,7 +14,8 @@ import {
   Chip,
 } from '@mui/material';
 import PushPinIcon from '@mui/icons-material/PushPin';
-import NoteIcon from '@mui/icons-material/Note';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import FolderIcon from '@mui/icons-material/Folder';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
@@ -37,24 +38,42 @@ interface Note {
   }>;
 }
 
+interface Notebook {
+  id: string;
+  name: string;
+}
+
 interface ExplorerListViewProps {
   notes: Note[];
+  notebooks: Notebook[];
   viewFilter: ViewFilter;
+  selectedNoteId?: string | null;
+  onNoteSelect?: (noteId: string | null) => void;
 }
 
 function NoteRow({
   note,
+  notebooks,
   onRename,
   onDelete,
   onEdit,
+  selectedNoteId,
+  onNoteSelect,
 }: {
   note: Note;
+  notebooks: Notebook[];
   onRename: (id: string, newName: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onEdit: (id: string) => void;
+  selectedNoteId?: string | null;
+  onNoteSelect?: (noteId: string | null) => void;
 }) {
+  const getNotebookName = (notebookId: string | null): string | null => {
+    if (!notebookId) return null;
+    const notebook = notebooks.find((nb) => nb.id === notebookId);
+    return notebook ? notebook.name : null;
+  };
   const [contextMenuAnchor, setContextMenuAnchor] = useState<HTMLElement | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
   const handleContextMenu = (e: React.MouseEvent<HTMLTableRowElement>) => {
     e.preventDefault();
@@ -70,19 +89,10 @@ function NoteRow({
     await onDelete(note.id);
   };
 
-  const handleDragStart = (e: React.DragEvent) => {
-    e.stopPropagation();
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/json', JSON.stringify({
-      type: 'note',
-      id: note.id,
-    }));
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    e.stopPropagation();
-    setIsDragging(false);
+  const handleClick = () => {
+    if (onNoteSelect) {
+      onNoteSelect(note.id === selectedNoteId ? null : note.id);
+    }
   };
 
   return (
@@ -90,24 +100,42 @@ function NoteRow({
       <TableRow 
         hover 
         onContextMenu={handleContextMenu}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        draggable
-        sx={{ 
-          cursor: isDragging ? 'grabbing' : 'grab',
-          opacity: isDragging ? 0.5 : 1,
+        onClick={onNoteSelect ? handleClick : undefined}
+        selected={selectedNoteId === note.id}
+        sx={{
+          cursor: onNoteSelect ? 'pointer' : 'default',
+          bgcolor: selectedNoteId === note.id ? 'action.selected' : 'transparent',
+          '&:hover': {
+            bgcolor: selectedNoteId === note.id ? 'action.selected' : 'action.hover',
+          },
         }}
       >
         <TableCell>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             {note.isPinned && <PushPinIcon fontSize="small" color="primary" sx={{ fontSize: 16 }} />}
-            <NoteIcon fontSize="small" sx={{ fontSize: 18 }} />
+            <ListAltIcon fontSize="small" sx={{ fontSize: 18 }} />
           </Box>
         </TableCell>
         <TableCell>
           <Typography variant="body2" fontWeight={500}>
             {note.title || 'Untitled Note'}
           </Typography>
+        </TableCell>
+        <TableCell>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {getNotebookName(note.notebookId) ? (
+              <>
+                <FolderIcon fontSize="small" sx={{ fontSize: 14, color: 'text.secondary' }} />
+                <Typography variant="body2" color="text.secondary">
+                  {getNotebookName(note.notebookId)}
+                </Typography>
+              </>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                -
+              </Typography>
+            )}
+          </Box>
         </TableCell>
         <TableCell>
           {note.tags && note.tags.length > 0 ? (
@@ -154,11 +182,17 @@ function NoteRow({
           </Typography>
         </TableCell>
         <TableCell align="right">
-          <Box component={Link} href={`/dashboard/notes/${note.id}`} sx={{ textDecoration: 'none' }}>
+          {onNoteSelect ? (
             <Typography variant="body2" color="primary">
-              Open
+              View
             </Typography>
-          </Box>
+          ) : (
+            <Box component={Link} href={`/dashboard/notes/${note.id}`} sx={{ textDecoration: 'none' }}>
+              <Typography variant="body2" color="primary">
+                Open
+              </Typography>
+            </Box>
+          )}
         </TableCell>
       </TableRow>
       <ContextMenu
@@ -176,7 +210,7 @@ function NoteRow({
   );
 }
 
-export function ExplorerListView({ notes, viewFilter }: ExplorerListViewProps) {
+export function ExplorerListView({ notes, notebooks, viewFilter, selectedNoteId, onNoteSelect }: ExplorerListViewProps) {
   const shouldShowNotes = viewFilter === 'tasks' || viewFilter === 'combined';
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -234,15 +268,13 @@ export function ExplorerListView({ notes, viewFilter }: ExplorerListViewProps) {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-        Notes
-      </Typography>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
               <TableCell width="40px"></TableCell>
               <TableCell>Title</TableCell>
+              <TableCell>Folder</TableCell>
               <TableCell>Tags</TableCell>
               <TableCell>Preview</TableCell>
               <TableCell>Updated</TableCell>
@@ -254,9 +286,12 @@ export function ExplorerListView({ notes, viewFilter }: ExplorerListViewProps) {
               <NoteRow
                 key={note.id}
                 note={note}
+                notebooks={notebooks}
                 onRename={handleRenameNote}
                 onDelete={handleDeleteNote}
                 onEdit={handleEdit}
+                selectedNoteId={selectedNoteId}
+                onNoteSelect={onNoteSelect}
               />
             ))}
           </TableBody>

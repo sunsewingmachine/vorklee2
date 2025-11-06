@@ -10,7 +10,7 @@ import {
   Typography,
   Divider,
 } from '@mui/material';
-import NoteIcon from '@mui/icons-material/Note';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { useTranslation } from '@/components/i18n/useTranslation';
 import { useRouter, usePathname } from 'next/navigation';
@@ -52,7 +52,7 @@ export const NotesMenuDropdown = memo(function NotesMenuDropdown() {
         aria-expanded={open}
         sx={{ color: 'inherit' }}
       >
-        <NoteIcon />
+        <ListAltIcon />
       </IconButton>
 
       <Menu
@@ -92,7 +92,7 @@ export const NotesMenuDropdown = memo(function NotesMenuDropdown() {
             selected={isActive('/dashboard')}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <NoteIcon fontSize="small" />
+              <ListAltIcon fontSize="small" />
               <Typography variant="body2">{t('nav.allNotes')}</Typography>
             </Box>
           </MenuItem>

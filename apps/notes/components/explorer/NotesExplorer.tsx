@@ -44,6 +44,8 @@ interface NotesExplorerProps {
   viewMode: ViewMode;
   highlightedItemId?: string | null;
   highlightedItemType?: 'note' | 'folder' | null;
+  selectedNoteId?: string | null;
+  onNoteSelect?: (noteId: string | null) => void;
 }
 
 export function NotesExplorer({
@@ -53,6 +55,8 @@ export function NotesExplorer({
   viewMode,
   highlightedItemId,
   highlightedItemType,
+  selectedNoteId,
+  onNoteSelect,
 }: NotesExplorerProps) {
   const renderView = () => {
     switch (viewMode) {
@@ -66,14 +70,32 @@ export function NotesExplorer({
                 viewFilter={viewFilter}
                 highlightedItemId={highlightedItemId}
                 highlightedItemType={highlightedItemType}
+                selectedNoteId={selectedNoteId}
+                onNoteSelect={onNoteSelect}
               />
             </CardContent>
           </Card>
         );
       case 'cards':
-        return <ExplorerCardView notes={notes} viewFilter={viewFilter} />;
+        return (
+          <ExplorerCardView
+            notes={notes}
+            notebooks={notebooks}
+            viewFilter={viewFilter}
+            selectedNoteId={selectedNoteId}
+            onNoteSelect={onNoteSelect}
+          />
+        );
       case 'list':
-        return <ExplorerListView notes={notes} viewFilter={viewFilter} />;
+        return (
+          <ExplorerListView
+            notes={notes}
+            notebooks={notebooks}
+            viewFilter={viewFilter}
+            selectedNoteId={selectedNoteId}
+            onNoteSelect={onNoteSelect}
+          />
+        );
       default:
         return null;
     }

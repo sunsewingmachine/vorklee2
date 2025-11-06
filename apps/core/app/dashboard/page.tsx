@@ -2,7 +2,7 @@
 
 import { Box, Typography, Grid, Card, CardContent, Button } from '@mui/material';
 import Link from 'next/link';
-import NoteIcon from '@mui/icons-material/Note';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 export default function DashboardPage() {
@@ -19,7 +19,7 @@ export default function DashboardPage() {
         <Grid item xs={12} sm={6} md={4}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
-              <NoteIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+              <ListAltIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
               <Typography variant="h6" gutterBottom>
                 Notes App
               </Typography>

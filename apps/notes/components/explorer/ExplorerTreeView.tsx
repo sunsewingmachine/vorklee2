@@ -11,7 +11,7 @@ import {
   Collapse,
   Typography,
 } from '@mui/material';
-import NoteIcon from '@mui/icons-material/Note';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
@@ -60,6 +60,8 @@ interface ExplorerTreeViewProps {
   viewFilter: ViewFilter;
   highlightedItemId?: string | null;
   highlightedItemType?: 'note' | 'folder' | null;
+  selectedNoteId?: string | null;
+  onNoteSelect?: (noteId: string | null) => void;
 }
 
 interface TreeNode {
@@ -439,6 +441,8 @@ function FolderItem({
                   isHighlighted={highlightedItemId === note.id && highlightedItemType === 'note'}
                   itemRef={noteRef}
                   isLastChild={isLast}
+                  selectedNoteId={selectedNoteId}
+                  onNoteSelect={onNoteSelect}
                 />
               );
             })}
@@ -462,6 +466,8 @@ function NoteItem({
   isHighlighted,
   itemRef,
   isLastChild = false,
+  selectedNoteId,
+  onNoteSelect,
 }: {
   note: Note;
   level: number;
@@ -476,6 +482,8 @@ function NoteItem({
   isHighlighted?: boolean;
   itemRef?: React.RefObject<HTMLDivElement>;
   isLastChild?: boolean;
+  selectedNoteId?: string | null;
+  onNoteSelect?: (noteId: string | null) => void;
 }) {
   const [contextMenuAnchor, setContextMenuAnchor] = useState<HTMLElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -501,6 +509,15 @@ function NoteItem({
 
   const handleEdit = () => {
     router.push(`/dashboard/notes/${note.id}`);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Don't navigate if there's a select handler - let the parent handle it
+    if (onNoteSelect) {
+      e.preventDefault();
+      e.stopPropagation();
+      onNoteSelect(note.id === selectedNoteId ? null : note.id);
+    }
   };
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -555,8 +572,9 @@ function NoteItem({
         ref={itemRef}
       >
         <ListItemButton
-          component={Link}
-          href={`/dashboard/notes/${note.id}`}
+          component={onNoteSelect ? 'div' : Link}
+          href={onNoteSelect ? undefined : `/dashboard/notes/${note.id}`}
+          onClick={handleClick}
           onContextMenu={handleContextMenu}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
@@ -570,7 +588,11 @@ function NoteItem({
             pl: 1.5 + level * 1.5,
             opacity: isDragging ? 0.5 : 1,
             cursor: isDragging ? 'grabbing' : 'grab',
-            bgcolor: isHighlighted ? 'primary.light' : 'transparent',
+            bgcolor: isHighlighted
+              ? 'primary.light'
+              : selectedNoteId === note.id
+                ? 'action.selected'
+                : 'transparent',
             border: isHighlighted ? '2px solid' : '2px solid transparent',
             borderColor: isHighlighted ? 'primary.main' : 'transparent',
             animation: isHighlighted ? 'pulse 2s ease-in-out 3' : 'none',
@@ -579,7 +601,11 @@ function NoteItem({
               '50%': { backgroundColor: 'primary.main', opacity: 0.7 },
             },
             '&:hover': {
-              bgcolor: isHighlighted ? 'primary.light' : 'action.hover',
+              bgcolor: isHighlighted
+                ? 'primary.light'
+                : selectedNoteId === note.id
+                  ? 'action.selected'
+                  : 'action.hover',
             },
           }}
         >
@@ -600,7 +626,7 @@ function NoteItem({
               {note.isPinned && (
                 <PushPinIcon fontSize="small" color="primary" sx={{ fontSize: 12 }} />
               )}
-              <NoteIcon fontSize="small" sx={{ fontSize: 16 }} />
+              <ListAltIcon fontSize="small" sx={{ fontSize: 16 }} />
             </Box>
           </ListItemIcon>
           <ListItemText
@@ -699,7 +725,7 @@ function getAncestorFolderIds(notebookId: string, notebooks: Notebook[]): string
   return ancestors;
 }
 
-export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItemId, highlightedItemType }: ExplorerTreeViewProps) {
+export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItemId, highlightedItemType, selectedNoteId, onNoteSelect }: ExplorerTreeViewProps) {
   // Load expanded folders from localStorage on mount
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
@@ -1100,7 +1126,7 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
               ? highlightedItemRef
               : undefined;
             const isLast = index === rootNotes.length - 1;
-            return (
+              return (
               <NoteItem
                 key={note.id}
                 note={note}
@@ -1116,6 +1142,8 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
                 isHighlighted={highlightedItemId === note.id && highlightedItemType === 'note'}
                 itemRef={noteRef}
                 isLastChild={isLast}
+                selectedNoteId={selectedNoteId}
+                onNoteSelect={onNoteSelect}
               />
             );
           })}

@@ -14,8 +14,10 @@ import AddIcon from '@mui/icons-material/Add';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { NotesExplorer } from '@/components/explorer/NotesExplorer';
+import { ResizableSplitPane } from '@/components/explorer/ResizableSplitPane';
+import { NoteContentViewer } from '@/components/explorer/NoteContentViewer';
 import { useDashboard } from '@/contexts/DashboardContext';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Note {
   id: string;
@@ -72,6 +74,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   const [highlightedItemType, setHighlightedItemType] = useState<'note' | 'folder' | null>(null);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
   // Get highlight params from URL
   useEffect(() => {
@@ -81,6 +84,11 @@ export default function DashboardPage() {
     if (highlightId && highlightType) {
       setHighlightedItemId(highlightId);
       setHighlightedItemType(highlightType);
+      
+      // If it's a note, also select it
+      if (highlightType === 'note') {
+        setSelectedNoteId(highlightId);
+      }
       
       // Clear highlight after 3 seconds
       const timer = setTimeout(() => {
@@ -128,12 +136,14 @@ export default function DashboardPage() {
     );
   }
 
+  const selectedNote = notes?.find((note) => note.id === selectedNoteId) || null;
+
   const hasContent = (notes && notes.length > 0) || (notebooks && notebooks.length > 0);
 
   return (
-    <Box>
+    <Box sx={{ height: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column', margin: -3 }}>
       {!hasContent ? (
-        <Card sx={{ textAlign: 'center', py: 8 }}>
+        <Card sx={{ textAlign: 'center', py: 8, m: 3 }}>
           <CardContent>
             <Typography variant="h6" color="text.secondary" gutterBottom>
               No notes yet
@@ -154,14 +164,34 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <NotesExplorer
-          notes={notes || []}
-          notebooks={notebooks || []}
-          viewFilter={viewState.filter}
-          viewMode={viewState.mode}
-          highlightedItemId={highlightedItemId}
-          highlightedItemType={highlightedItemType}
-        />
+        <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          <ResizableSplitPane
+            defaultLeftWidth={50}
+            minLeftWidth={30}
+            minRightWidth={30}
+            left={
+              <Box sx={{ height: '100%', overflow: 'auto', p: 2 }}>
+                <NotesExplorer
+                  notes={notes || []}
+                  notebooks={notebooks || []}
+                  viewFilter={viewState.filter}
+                  viewMode={viewState.mode}
+                  highlightedItemId={highlightedItemId}
+                  highlightedItemType={highlightedItemType}
+                  selectedNoteId={selectedNoteId}
+                  onNoteSelect={setSelectedNoteId}
+                />
+              </Box>
+            }
+            right={
+              <NoteContentViewer
+                note={selectedNote}
+                notebooks={notebooks || []}
+                onClose={() => setSelectedNoteId(null)}
+              />
+            }
+          />
+        </Box>
       )}
     </Box>
   );

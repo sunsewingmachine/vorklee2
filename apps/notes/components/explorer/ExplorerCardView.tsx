@@ -10,6 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import PushPinIcon from '@mui/icons-material/PushPin';
+import FolderIcon from '@mui/icons-material/Folder';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
@@ -32,24 +33,42 @@ interface Note {
   }>;
 }
 
+interface Notebook {
+  id: string;
+  name: string;
+}
+
 interface ExplorerCardViewProps {
   notes: Note[];
+  notebooks: Notebook[];
   viewFilter: ViewFilter;
+  selectedNoteId?: string | null;
+  onNoteSelect?: (noteId: string | null) => void;
 }
 
 function NoteCard({
   note,
+  notebooks,
   onRename,
   onDelete,
   onEdit,
+  selectedNoteId,
+  onNoteSelect,
 }: {
   note: Note;
+  notebooks: Notebook[];
   onRename: (id: string, newName: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onEdit: (id: string) => void;
+  selectedNoteId?: string | null;
+  onNoteSelect?: (noteId: string | null) => void;
 }) {
+  const getNotebookName = (notebookId: string | null): string | null => {
+    if (!notebookId) return null;
+    const notebook = notebooks.find((nb) => nb.id === notebookId);
+    return notebook ? notebook.name : null;
+  };
   const [contextMenuAnchor, setContextMenuAnchor] = useState<HTMLElement | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -65,19 +84,10 @@ function NoteCard({
     await onDelete(note.id);
   };
 
-  const handleDragStart = (e: React.DragEvent) => {
-    e.stopPropagation();
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/json', JSON.stringify({
-      type: 'note',
-      id: note.id,
-    }));
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    e.stopPropagation();
-    setIsDragging(false);
+  const handleClick = () => {
+    if (onNoteSelect) {
+      onNoteSelect(note.id === selectedNoteId ? null : note.id);
+    }
   };
 
   return (
@@ -87,13 +97,15 @@ function NoteCard({
           height: '100%', 
           display: 'flex', 
           flexDirection: 'column',
-          cursor: isDragging ? 'grabbing' : 'grab',
-          opacity: isDragging ? 0.5 : 1,
+          cursor: onNoteSelect ? 'pointer' : 'default',
+          border: selectedNoteId === note.id ? 2 : 1,
+          borderColor: selectedNoteId === note.id ? 'primary.main' : 'divider',
+          '&:hover': {
+            boxShadow: selectedNoteId === note.id ? 4 : 2,
+          },
         }}
         onContextMenu={handleContextMenu}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        draggable
+        onClick={onNoteSelect ? handleClick : undefined}
       >
         <CardContent sx={{ flexGrow: 1 }}>
           <Box display="flex" alignItems="center" mb={1}>
@@ -102,6 +114,14 @@ function NoteCard({
             </Typography>
             {note.isPinned && <PushPinIcon fontSize="small" color="primary" />}
           </Box>
+          {getNotebookName(note.notebookId) && (
+            <Box mb={1} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <FolderIcon fontSize="small" sx={{ fontSize: 14, color: 'text.secondary' }} />
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                {getNotebookName(note.notebookId)}
+              </Typography>
+            </Box>
+          )}
           {note.tags && note.tags.length > 0 && (
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
               {note.tags.slice(0, 3).map((tag) => (
@@ -159,11 +179,17 @@ function NoteCard({
           </Box>
         </CardContent>
         <CardActions>
-          <Box component={Link} href={`/dashboard/notes/${note.id}`} sx={{ textDecoration: 'none' }}>
+          {onNoteSelect ? (
             <Typography variant="body2" color="primary">
-              Open
+              View
             </Typography>
-          </Box>
+          ) : (
+            <Box component={Link} href={`/dashboard/notes/${note.id}`} sx={{ textDecoration: 'none' }}>
+              <Typography variant="body2" color="primary">
+                Open
+              </Typography>
+            </Box>
+          )}
         </CardActions>
       </Card>
       <ContextMenu
@@ -181,7 +207,7 @@ function NoteCard({
   );
 }
 
-export function ExplorerCardView({ notes, viewFilter }: ExplorerCardViewProps) {
+export function ExplorerCardView({ notes, notebooks, viewFilter, selectedNoteId, onNoteSelect }: ExplorerCardViewProps) {
   const shouldShowNotes = viewFilter === 'tasks' || viewFilter === 'combined';
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -239,17 +265,17 @@ export function ExplorerCardView({ notes, viewFilter }: ExplorerCardViewProps) {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-        Notes
-      </Typography>
       <Grid container spacing={3}>
         {notes.map((note) => (
           <Grid item xs={12} sm={6} md={4} key={note.id}>
             <NoteCard
               note={note}
+              notebooks={notebooks}
               onRename={handleRenameNote}
               onDelete={handleDeleteNote}
               onEdit={handleEdit}
+              selectedNoteId={selectedNoteId}
+              onNoteSelect={onNoteSelect}
             />
           </Grid>
         ))}

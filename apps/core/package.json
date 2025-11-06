@@ -24,7 +24,7 @@
     "@vorklee2/core-billing": "*",
     "@vorklee2/core-utils": "*",
     "drizzle-orm": "^0.36.4",
-    "next": "^15.1.4",
+    "next": "^16.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -35,7 +35,7 @@
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.28.1",
     "eslint": "^9.0.0",
-    "eslint-config-next": "^15.1.4",
+    "eslint-config-next": "^16.0.1",
     "tsx": "^4.20.6",
     "typescript": "^5.6.0"
   }

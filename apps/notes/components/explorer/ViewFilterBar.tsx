@@ -3,7 +3,7 @@
 import React from 'react';
 import { ToggleButton, ToggleButtonGroup, Box, Typography } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
-import NoteIcon from '@mui/icons-material/Note';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 import ViewListIcon from '@mui/icons-material/ViewList';
 
 export type ViewFilter = 'tasks' | 'folders' | 'combined';
@@ -33,7 +33,7 @@ export function ViewFilterBar({ value, onChange }: ViewFilterBarProps) {
         size="small"
       >
         <ToggleButton value="tasks" aria-label="tasks only">
-          <NoteIcon sx={{ mr: 0.5, fontSize: 18 }} />
+          <ListAltIcon sx={{ mr: 0.5, fontSize: 18 }} />
           Tasks Only
         </ToggleButton>
         <ToggleButton value="folders" aria-label="folders only">
