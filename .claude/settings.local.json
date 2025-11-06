@@ -11,7 +11,8 @@
       "Bash(taskkill /F /PID 13540)",
       "Bash(nul)",
       "Bash(dir \"D:\\Files\\Git\\vorklee2\\nul\")",
-      "Bash(dir /a D:FilesGitvorklee2nul)"
+      "Bash(dir /a D:FilesGitvorklee2nul)",
+      "Bash(powershell -Command \"Stop-Process -Id 17996 -Force; Stop-Process -Id 1908 -Force\")"
     ],
     "deny": [],
     "ask": []
