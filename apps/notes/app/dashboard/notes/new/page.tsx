@@ -214,9 +214,34 @@ export default function NewNotePage() {
               <ArrowBackIcon />
             </IconButton>
           </Tooltip>
-          <Typography variant="h4" component="h1">
+          <Typography variant="h4" component="h1" flexGrow={1}>
             Create New Note
           </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<CancelIcon />}
+              onClick={handleCancel}
+              disabled={createNoteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              type="submit"
+              form="new-note-form"
+              startIcon={
+                createNoteMutation.isPending ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <SaveIcon />
+                )
+              }
+              disabled={createNoteMutation.isPending}
+            >
+              {createNoteMutation.isPending ? 'Creating...' : 'Create'}
+            </Button>
+          </Stack>
         </Stack>
 
         <Typography variant="body2" color="text.secondary">
@@ -232,7 +257,7 @@ export default function NewNotePage() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit}>
+      <form id="new-note-form" onSubmit={handleSubmit}>
         <Card>
           <CardContent>
             <Stack spacing={3}>
@@ -320,32 +345,6 @@ export default function NewNotePage() {
                 }
                 label="Pin this note"
               />
-
-              {/* Action Buttons */}
-              <Stack direction="row" spacing={2} justifyContent="flex-end">
-                <Button
-                  variant="outlined"
-                  startIcon={<CancelIcon />}
-                  onClick={handleCancel}
-                  disabled={createNoteMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  startIcon={
-                    createNoteMutation.isPending ? (
-                      <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      <SaveIcon />
-                    )
-                  }
-                  disabled={createNoteMutation.isPending}
-                >
-                  {createNoteMutation.isPending ? 'Creating...' : 'Create Note'}
-                </Button>
-              </Stack>
             </Stack>
           </CardContent>
         </Card>

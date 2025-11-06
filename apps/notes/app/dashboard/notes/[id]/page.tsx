@@ -291,7 +291,33 @@ export default function NoteDetailPage() {
           <Typography variant="h4" component="h1" flexGrow={1}>
             {isEditing ? 'Edit Note' : note.title}
           </Typography>
-          {!isEditing && (
+          {isEditing ? (
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                startIcon={<CancelIcon />}
+                onClick={handleCancel}
+                disabled={updateNoteMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                type="submit"
+                form="note-form"
+                startIcon={
+                  updateNoteMutation.isPending ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <SaveIcon />
+                  )
+                }
+                disabled={updateNoteMutation.isPending}
+              >
+                {updateNoteMutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            </Stack>
+          ) : (
             <Stack direction="row" spacing={1}>
               <Tooltip title="Edit Note">
                 <IconButton
@@ -333,7 +359,7 @@ export default function NoteDetailPage() {
       <Card>
         <CardContent>
           {isEditing ? (
-            <form onSubmit={handleSubmit}>
+            <form id="note-form" onSubmit={handleSubmit}>
               <Stack spacing={3}>
                 <TextField
                   label="Title"
@@ -397,31 +423,6 @@ export default function NoteDetailPage() {
                   }
                   label="Pin this note"
                 />
-
-                <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <Button
-                    variant="outlined"
-                    startIcon={<CancelIcon />}
-                    onClick={handleCancel}
-                    disabled={updateNoteMutation.isPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    startIcon={
-                      updateNoteMutation.isPending ? (
-                        <CircularProgress size={20} color="inherit" />
-                      ) : (
-                        <SaveIcon />
-                      )
-                    }
-                    disabled={updateNoteMutation.isPending}
-                  >
-                    {updateNoteMutation.isPending ? 'Saving...' : 'Save Changes'}
-                  </Button>
-                </Stack>
               </Stack>
             </form>
           ) : (
