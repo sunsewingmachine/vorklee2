@@ -52,18 +52,29 @@ interface Note {
 async function fetchNote(id: string): Promise<Note> {
   const response = await fetch(`/api/notes/${id}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch note');
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error?.message || `Failed to fetch note: ${response.status} ${response.statusText}`;
+    throw new Error(errorMessage);
   }
   const json = await response.json();
   return json.data;
 }
 
 export default function NoteDetailPage() {
+  console.log('=== NoteDetailPage Component Rendered ===');
+  
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const noteId = params.id as string;
+  
+  console.log('Raw params:', params);
+  console.log('params.id:', params.id, 'type:', typeof params.id);
+  
+  // Extract noteId from params - handle both string and array cases
+  const noteId = Array.isArray(params.id) ? params.id[0] : (params.id as string | undefined);
+  
+  console.log('Extracted noteId:', noteId);
 
   // Check if edit mode should be enabled from query parameter
   const shouldStartEditing = searchParams.get('edit') === 'true';
@@ -79,11 +90,34 @@ export default function NoteDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [attachmentRefreshKey, setAttachmentRefreshKey] = useState(0);
 
-  // Fetch note data
+  // Fetch note data - only run if noteId is available and valid
+  const queryEnabled = !!noteId && typeof noteId === 'string';
+  console.log('Query enabled:', queryEnabled, 'noteId:', noteId);
+  
   const { data: note, isLoading, error } = useQuery({
     queryKey: ['note', noteId],
-    queryFn: () => fetchNote(noteId),
+    queryFn: async () => {
+      console.log('Query function called with noteId:', noteId);
+      if (!noteId || typeof noteId !== 'string') {
+        console.error('Note ID is invalid:', noteId);
+        throw new Error('Note ID is required');
+      }
+      try {
+        console.log('Fetching note:', noteId);
+        const result = await fetchNote(noteId);
+        console.log('Note fetched successfully:', result);
+        return result;
+      } catch (err) {
+        console.error('Error fetching note:', err);
+        throw err;
+      }
+    },
+    enabled: queryEnabled,
+    retry: 1,
+    retryDelay: 1000,
   });
+  
+  console.log('Query state:', { isLoading, error: error?.message, hasNote: !!note });
 
   // Update form when note loads
   useEffect(() => {
@@ -100,6 +134,9 @@ export default function NoteDetailPage() {
   // Update mutation
   const updateNoteMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (!noteId) {
+        throw new Error('Note ID is required');
+      }
       const response = await fetch(`/api/notes/${noteId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -107,8 +144,9 @@ export default function NoteDetailPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update note');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || `Failed to update note: ${response.status} ${response.statusText}`;
+        throw new Error(errorMessage);
       }
 
       return response.json();
@@ -124,13 +162,17 @@ export default function NoteDetailPage() {
   // Delete mutation
   const deleteNoteMutation = useMutation({
     mutationFn: async () => {
+      if (!noteId) {
+        throw new Error('Note ID is required');
+      }
       const response = await fetch(`/api/notes/${noteId}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete note');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || `Failed to delete note: ${response.status} ${response.statusText}`;
+        throw new Error(errorMessage);
       }
 
       return response.json();
@@ -196,11 +238,24 @@ export default function NoteDetailPage() {
     deleteNoteMutation.mutate();
   };
 
+  if (!noteId) {
+    return (
+      <Container maxWidth="md" sx={{ py: 3 }}>
+        <Alert severity="error">
+          Invalid note ID
+        </Alert>
+      </Container>
+    );
+  }
+
   if (isLoading) {
     return (
       <Container maxWidth="md" sx={{ py: 3 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px" gap={2}>
           <CircularProgress />
+          <Typography variant="body2" color="text.secondary">
+            Loading note{noteId ? ` (${noteId.substring(0, 8)}...)` : ''}...
+          </Typography>
         </Box>
       </Container>
     );
@@ -298,7 +353,7 @@ export default function NoteDetailPage() {
                 />
 
                 {/* Attachments Section */}
-                {isEditing && (
+                {isEditing && noteId && (
                   <Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="subtitle2" fontWeight={600}>
