@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Box, Container, Typography, Button, Stack, Card, CardContent, Grid } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
