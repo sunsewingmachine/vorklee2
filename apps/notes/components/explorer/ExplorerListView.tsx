@@ -259,7 +259,7 @@ export function ExplorerListView({ notes, notebooks, viewFilter, selectedNoteId,
   };
 
   const handleEdit = (id: string) => {
-    router.push(`/dashboard/notes/${id}`);
+    router.push(`/dashboard/notes/${id}?edit=true`);
   };
 
   if (!shouldShowNotes) {

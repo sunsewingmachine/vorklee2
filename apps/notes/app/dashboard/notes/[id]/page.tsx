@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
@@ -59,10 +59,13 @@ async function fetchNote(id: string): Promise<Note> {
 export default function NoteDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const noteId = params.id as string;
 
-  const [isEditing, setIsEditing] = useState(false);
+  // Check if edit mode should be enabled from query parameter
+  const shouldStartEditing = searchParams.get('edit') === 'true';
+  const [isEditing, setIsEditing] = useState(shouldStartEditing);
   const [formData, setFormData] = useState({
     title: '',
     content: '',

@@ -63,7 +63,7 @@ export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewe
   }
 
   const handleEdit = () => {
-    router.push(`/dashboard/notes/${note.id}`);
+    router.push(`/dashboard/notes/${note.id}?edit=true`);
   };
 
   const notebook = note.notebookId
@@ -91,19 +91,51 @@ export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewe
         }}
       >
         {/* Title and Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            bgcolor: note.tags && note.tags.length > 0 && note.tags[0].color 
+              ? note.tags[0].color 
+              : 'transparent',
+            color: note.tags && note.tags.length > 0 && note.tags[0].color 
+              ? 'white' 
+              : 'text.primary',
+            px: 1.5,
+            py: 1,
+            borderRadius: 1,
+            mb: 1,
+          }}
+        >
           <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
             {note.title || 'Untitled Note'}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Tooltip title="Edit note">
-              <IconButton size="small" onClick={handleEdit}>
+              <IconButton 
+                size="small" 
+                onClick={handleEdit}
+                sx={{
+                  color: note.tags && note.tags.length > 0 && note.tags[0].color 
+                    ? 'white' 
+                    : 'inherit',
+                }}
+              >
                 <EditIcon fontSize="small" />
               </IconButton>
             </Tooltip>
             {onClose && (
               <Tooltip title="Close">
-                <IconButton size="small" onClick={onClose}>
+                <IconButton 
+                  size="small" 
+                  onClick={onClose}
+                  sx={{
+                    color: note.tags && note.tags.length > 0 && note.tags[0].color 
+                      ? 'white' 
+                      : 'inherit',
+                  }}
+                >
                   <CloseIcon fontSize="small" />
                 </IconButton>
               </Tooltip>

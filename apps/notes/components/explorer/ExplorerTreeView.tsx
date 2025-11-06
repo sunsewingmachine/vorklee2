@@ -514,7 +514,7 @@ function NoteItem({
   };
 
   const handleEdit = () => {
-    router.push(`/dashboard/notes/${note.id}`);
+    router.push(`/dashboard/notes/${note.id}?edit=true`);
   };
 
   const handleClick = (e: React.MouseEvent) => {

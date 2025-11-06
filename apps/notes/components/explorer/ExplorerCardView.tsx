@@ -109,7 +109,22 @@ function NoteCard({
       >
         <CardContent sx={{ flexGrow: 1 }}>
           <Box display="flex" alignItems="center" mb={1}>
-            <Typography variant="h6" component="h2" flexGrow={1}>
+            <Typography 
+              variant="h6" 
+              component="h2" 
+              flexGrow={1}
+              sx={{
+                bgcolor: note.tags && note.tags.length > 0 && note.tags[0].color 
+                  ? note.tags[0].color 
+                  : 'action.selected',
+                color: note.tags && note.tags.length > 0 && note.tags[0].color 
+                  ? 'white' 
+                  : 'text.primary',
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+              }}
+            >
               {note.title || 'Untitled Note'}
             </Typography>
             {note.isPinned && <PushPinIcon fontSize="small" color="primary" />}
@@ -256,7 +271,7 @@ export function ExplorerCardView({ notes, notebooks, viewFilter, selectedNoteId,
   };
 
   const handleEdit = (id: string) => {
-    router.push(`/dashboard/notes/${id}`);
+    router.push(`/dashboard/notes/${id}?edit=true`);
   };
 
   if (!shouldShowNotes) {
