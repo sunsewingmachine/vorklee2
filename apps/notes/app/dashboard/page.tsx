@@ -13,6 +13,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { NotesExplorer } from '@/components/explorer/NotesExplorer';
 import { ResizableSplitPane } from '@/components/explorer/ResizableSplitPane';
 import { NoteContentViewer } from '@/components/explorer/NoteContentViewer';
@@ -69,7 +70,7 @@ async function fetchNotebooks(): Promise<Notebook[]> {
   return json.data || [];
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const { viewState, selectedTagIds } = useDashboard();
   const searchParams = useSearchParams();
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
@@ -194,5 +195,17 @@ export default function DashboardPage() {
         </Box>
       )}
     </Box>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    }>
+      <DashboardPageContent />
+    </Suspense>
   );
 }

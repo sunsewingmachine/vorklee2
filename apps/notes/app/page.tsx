@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Box, Container, Typography, Button, Stack } from '@mui/material';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';

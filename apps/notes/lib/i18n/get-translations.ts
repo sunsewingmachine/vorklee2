@@ -6,7 +6,7 @@
 import type { LocaleCode } from './config';
 
 export type TranslationKey = string;
-export type Translations = Record<string, string | Translations>;
+export type Translations = Record<string, string | Record<string, any>>;
 
 const translationCache = new Map<LocaleCode, Translations>();
 

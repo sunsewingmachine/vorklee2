@@ -108,7 +108,7 @@ export class AttachmentService {
       )
       .orderBy(desc(fileAttachments.createdAt));
 
-    return results.map((r) => this.mapFileAttachment(r));
+    return results.map((r: any) => this.mapFileAttachment(r));
   }
 
   /**
@@ -131,7 +131,7 @@ export class AttachmentService {
       )
       .orderBy(desc(linkAttachments.createdAt));
 
-    return results.map((r) => this.mapLinkAttachment(r));
+    return results.map((r: any) => this.mapLinkAttachment(r));
   }
 
   /**

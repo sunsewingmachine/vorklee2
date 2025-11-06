@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
@@ -63,7 +63,7 @@ function buildFolderPath(notebookId: string | undefined, notebooks: Notebook[]):
   return path.length > 0 ? path.join(' / ') : 'Root';
 }
 
-export default function NewNotePage() {
+function NewNotePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -350,6 +350,20 @@ export default function NewNotePage() {
         </Card>
       </form>
     </Container>
+  );
+}
+
+export default function NewNotePage() {
+  return (
+    <Suspense fallback={
+      <Container maxWidth="md" sx={{ py: 3 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+          <CircularProgress />
+        </Box>
+      </Container>
+    }>
+      <NewNotePageContent />
+    </Suspense>
   );
 }
 

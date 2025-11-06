@@ -271,7 +271,8 @@ export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewe
               },
             }}
           >
-            <ReactMarkdown>{note.content}</ReactMarkdown>
+            {/* @ts-expect-error - react-markdown type compatibility with React 19 */}
+            <ReactMarkdown>{note.content || ''}</ReactMarkdown>
           </Box>
         ) : (
           <Typography variant="body2" color="text.secondary">

@@ -123,13 +123,13 @@ function FolderItem({
   onDrop?: (e: React.DragEvent, targetFolderId: string) => void;
   dragOverFolderId?: string | null;
   allNotebooks?: Notebook[];
-  onDragStart?: (data: { type: 'folder'; id: string }) => void;
+  onDragStart?: (data: { type: 'note' | 'folder'; id: string }) => void;
   onDragEnd?: () => void;
   isHighlighted?: boolean;
-  itemRef?: React.RefObject<HTMLDivElement>;
+  itemRef?: React.RefObject<HTMLLIElement>;
   highlightedItemId?: string | null;
   highlightedItemType?: 'note' | 'folder' | null;
-  highlightedItemRef?: React.RefObject<HTMLDivElement>;
+  highlightedItemRef?: React.RefObject<HTMLLIElement>;
   isLastChild?: boolean;
   selectedNoteId?: string | null;
   onNoteSelect?: (noteId: string | null) => void;
@@ -483,10 +483,10 @@ function NoteItem({
   onDrop?: (e: React.DragEvent, targetFolderId: string) => void;
   dragOverFolderId?: string | null;
   allNotebooks?: Notebook[];
-  onDragStart?: (data: { type: 'note'; id: string }) => void;
+  onDragStart?: (data: { type: 'note' | 'folder'; id: string }) => void;
   onDragEnd?: () => void;
   isHighlighted?: boolean;
-  itemRef?: React.RefObject<HTMLDivElement>;
+  itemRef?: React.RefObject<HTMLLIElement>;
   isLastChild?: boolean;
   selectedNoteId?: string | null;
   onNoteSelect?: (noteId: string | null) => void;
@@ -761,7 +761,7 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
   const [draggedItem, setDraggedItem] = useState<{ type: 'note' | 'folder'; id: string } | null>(null);
   const [createSubfolderDialogOpen, setCreateSubfolderDialogOpen] = useState(false);
   const [subfolderParentId, setSubfolderParentId] = useState<string | null>(null);
-  const highlightedItemRef = React.useRef<HTMLDivElement | null>(null);
+  const highlightedItemRef = React.useRef<HTMLLIElement | null>(null);
   const shouldShowFolders = viewFilter === 'folders' || viewFilter === 'combined';
   const shouldShowNotes = viewFilter === 'tasks' || viewFilter === 'combined';
   const queryClient = useQueryClient();
