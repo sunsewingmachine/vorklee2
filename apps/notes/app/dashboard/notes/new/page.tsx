@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   Box,
   Container,
@@ -18,11 +18,48 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
+  Chip,
 } from '@mui/material';
 import { TagSelector } from '@/components/tags/TagSelector';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CancelIcon from '@mui/icons-material/Cancel';
 import SaveIcon from '@mui/icons-material/Save';
+import FolderIcon from '@mui/icons-material/Folder';
+
+interface Notebook {
+  id: string;
+  name: string;
+  parentId: string | null;
+}
+
+async function fetchNotebooks(): Promise<Notebook[]> {
+  const response = await fetch('/api/notebooks');
+  if (!response.ok) {
+    throw new Error('Failed to fetch notebooks');
+  }
+  const data = await response.json();
+  return data.data || [];
+}
+
+function buildFolderPath(notebookId: string | undefined, notebooks: Notebook[]): string {
+  if (!notebookId) {
+    return 'Root';
+  }
+
+  const notebookMap = new Map(notebooks.map(nb => [nb.id, nb]));
+  const path: string[] = [];
+  let currentId: string | null = notebookId;
+
+  while (currentId) {
+    const notebook = notebookMap.get(currentId);
+    if (!notebook) break;
+    
+    path.unshift(notebook.name);
+    currentId = notebook.parentId;
+  }
+
+  return path.length > 0 ? path.join(' / ') : 'Root';
+}
 
 export default function NewNotePage() {
   const router = useRouter();
@@ -39,6 +76,17 @@ export default function NewNotePage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Fetch notebooks to build folder path
+  const { data: notebooks = [] } = useQuery<Notebook[]>({
+    queryKey: ['notebooks'],
+    queryFn: fetchNotebooks,
+  });
+
+  // Build folder path
+  const folderPath = useMemo(() => {
+    return buildFolderPath(formData.notebookId, notebooks);
+  }, [formData.notebookId, notebooks]);
 
   // Update notebookId when search params change
   useEffect(() => {
@@ -183,6 +231,20 @@ export default function NewNotePage() {
         <Card>
           <CardContent>
             <Stack spacing={3}>
+              {/* Folder Path Display */}
+              <Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Location
+                </Typography>
+                <Chip
+                  icon={<FolderIcon />}
+                  label={folderPath}
+                  variant="outlined"
+                  size="small"
+                  sx={{ mt: 0.5 }}
+                />
+              </Box>
+
               {/* Title Field */}
               <TextField
                 label="Title"

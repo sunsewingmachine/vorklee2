@@ -107,6 +107,8 @@ function FolderItem({
   highlightedItemType,
   highlightedItemRef,
   isLastChild = false,
+  selectedNoteId,
+  onNoteSelect,
 }: {
   node: TreeNode;
   level: number;
@@ -129,6 +131,8 @@ function FolderItem({
   highlightedItemType?: 'note' | 'folder' | null;
   highlightedItemRef?: React.RefObject<HTMLDivElement>;
   isLastChild?: boolean;
+  selectedNoteId?: string | null;
+  onNoteSelect?: (noteId: string | null) => void;
 }) {
   const isExpanded = expandedFolders.has(node.notebook.id);
   const hasChildren = node.children.length > 0 || node.notes.length > 0;
@@ -414,6 +418,8 @@ function FolderItem({
                 highlightedItemType={highlightedItemType}
                 highlightedItemRef={highlightedItemRef}
                 isLastChild={isLast}
+                selectedNoteId={selectedNoteId}
+                onNoteSelect={onNoteSelect}
               />
             );
           })}
@@ -518,6 +524,7 @@ function NoteItem({
       e.stopPropagation();
       onNoteSelect(note.id === selectedNoteId ? null : note.id);
     }
+    // Otherwise, let Link handle navigation naturally
   };
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -572,9 +579,16 @@ function NoteItem({
         ref={itemRef}
       >
         <ListItemButton
-          component={onNoteSelect ? 'div' : Link}
-          href={onNoteSelect ? undefined : `/dashboard/notes/${note.id}`}
-          onClick={handleClick}
+          {...(onNoteSelect
+            ? {
+                component: 'div',
+                onClick: handleClick,
+              }
+            : {
+                component: Link,
+                href: `/dashboard/notes/${note.id}`,
+                onClick: handleClick,
+              })}
           onContextMenu={handleContextMenu}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
@@ -1115,6 +1129,8 @@ export function ExplorerTreeView({ notes, notebooks, viewFilter, highlightedItem
                 highlightedItemType={highlightedItemType}
                 highlightedItemRef={highlightedItemRef}
                 isLastChild={isLast}
+                selectedNoteId={selectedNoteId}
+                onNoteSelect={onNoteSelect}
               />
             );
           })}
