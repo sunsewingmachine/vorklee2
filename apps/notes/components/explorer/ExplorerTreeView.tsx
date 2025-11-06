@@ -17,6 +17,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import AddBoxIcon from '@mui/icons-material/AddBox';
 import IndeterminateCheckBoxIcon from '@mui/icons-material/IndeterminateCheckBox';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
@@ -291,6 +292,18 @@ function FolderItem({
         >
           <ListItemIcon sx={{ minWidth: 28 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              <DragIndicatorIcon
+                fontSize="small"
+                sx={{
+                  fontSize: 16,
+                  color: 'text.secondary',
+                  cursor: 'grab',
+                  opacity: 0.6,
+                  '&:hover': {
+                    opacity: 1,
+                  },
+                }}
+              />
               {hasChildren ? (
                 isExpanded ? (
                   <IndeterminateCheckBoxIcon
@@ -572,6 +585,18 @@ function NoteItem({
         >
           <ListItemIcon sx={{ minWidth: 28 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              <DragIndicatorIcon
+                fontSize="small"
+                sx={{
+                  fontSize: 16,
+                  color: 'text.secondary',
+                  cursor: 'grab',
+                  opacity: 0.6,
+                  '&:hover': {
+                    opacity: 1,
+                  },
+                }}
+              />
               {note.isPinned && (
                 <PushPinIcon fontSize="small" color="primary" sx={{ fontSize: 12 }} />
               )}
