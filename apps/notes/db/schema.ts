@@ -106,7 +106,7 @@ export const noteTags = pgTable('note_tags', {
  * Re-export attachment tables from core-attachments module
  * These tables are used for note attachments (entityType: 'note')
  */
-export { fileAttachments, linkAttachments };
+export { fileAttachments, linkAttachments } from '@vorklee2/core-attachments';
 
 /**
  * Sharing table - note collaboration and permissions
@@ -232,4 +232,17 @@ export const activeSessions = pgTable('active_sessions', {
   };
 });
 
+// Export all tables for Drizzle (must be after all table definitions)
+export const schema = {
+  notebooks,
+  notes,
+  tags,
+  noteTags,
+  fileAttachments,
+  linkAttachments,
+  noteShares,
+  noteComments,
+  noteVersions,
+  activeSessions,
+};
 

@@ -8,15 +8,13 @@ import {
   CardMedia,
   CardContent,
   IconButton,
-  Chip,
-  Link as MuiLink,
   Grid,
-  Tooltip,
+  Link as MuiLink,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import ImageIcon from '@mui/icons-material/Image';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import LinkIcon from '@mui/icons-material/Link';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import type { FileAttachment, LinkAttachment } from '@vorklee2/core-attachments';
 
 interface AttachmentsListProps {
@@ -131,21 +129,33 @@ export function AttachmentsList({ noteId, onDelete, refreshTrigger }: Attachment
                 {isImage(file.fileType) && file.fileUrl && (
                   <CardMedia
                     component="img"
-                    height="140"
+                    height="200"
                     image={file.fileUrl}
                     alt={file.fileName}
-                    sx={{ objectFit: 'cover' }}
+                    sx={{ 
+                      objectFit: 'cover',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        opacity: 0.8,
+                      },
+                    }}
+                    onClick={() => window.open(file.fileUrl, '_blank')}
                   />
                 )}
                 {isPdf(file.fileType) && (
                   <Box
                     sx={{
-                      height: 140,
+                      height: 200,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       bgcolor: 'grey.100',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: 'grey.200',
+                      },
                     }}
+                    onClick={() => window.open(file.fileUrl, '_blank')}
                   >
                     <PictureAsPdfIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
                   </Box>
@@ -168,16 +178,6 @@ export function AttachmentsList({ noteId, onDelete, refreshTrigger }: Attachment
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Box>
-                  {file.fileUrl && (
-                    <MuiLink
-                      href={file.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ mt: 1, display: 'block' }}
-                    >
-                      View
-                    </MuiLink>
-                  )}
                 </CardContent>
               </Card>
             </Grid>
@@ -187,39 +187,85 @@ export function AttachmentsList({ noteId, onDelete, refreshTrigger }: Attachment
 
       {/* Link Attachments */}
       {links.length > 0 && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {links.map((link) => (
-            <Card key={link.id} variant="outlined">
+            <Card key={link.id} variant="outlined" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 2 } }}>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <MuiLink
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  {/* Preview Image if available */}
+                  {link.imageUrl && (
+                    <Box
+                      sx={{
+                        width: 120,
+                        height: 80,
+                        flexShrink: 0,
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        bgcolor: 'grey.100',
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(link.url, '_blank');
+                      }}
                     >
-                      <LinkIcon fontSize="small" />
-                      <Typography variant="body2" noWrap>
-                        {link.title || link.url}
-                      </Typography>
-                    </MuiLink>
-                    {link.description && (
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {link.description}
-                      </Typography>
-                    )}
-                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                      {link.url}
-                    </Typography>
+                      <CardMedia
+                        component="img"
+                        image={link.imageUrl}
+                        alt={link.title || 'Link preview'}
+                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </Box>
+                  )}
+                  
+                  {/* Link Content */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <MuiLink
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1, 
+                            mb: 0.5,
+                            textDecoration: 'none',
+                            '&:hover': {
+                              textDecoration: 'underline',
+                            },
+                          }}
+                        >
+                          <LinkIcon fontSize="small" />
+                          <Typography variant="body2" fontWeight={600} noWrap>
+                            {link.title || link.url}
+                          </Typography>
+                          <OpenInNewIcon fontSize="small" sx={{ fontSize: 14 }} />
+                        </MuiLink>
+                        {link.description && (
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                            {link.description}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ 
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {link.url}
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteLink(link.id);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                   </Box>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDeleteLink(link.id)}
-                    sx={{ ml: 1 }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
                 </Box>
               </CardContent>
             </Card>

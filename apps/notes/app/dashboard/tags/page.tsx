@@ -118,10 +118,7 @@ export default function TagsPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Tags
-        </Typography>
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
         <Button 
           variant="contained" 
           startIcon={<AddIcon />}

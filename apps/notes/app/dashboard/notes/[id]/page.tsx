@@ -25,6 +25,8 @@ import {
   DialogActions,
 } from '@mui/material';
 import { TagSelector } from '@/components/tags/TagSelector';
+import { AttachButton } from '@/components/attachments/AttachButton';
+import { AttachmentsList } from '@/components/attachments/AttachmentsList';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -75,6 +77,7 @@ export default function NoteDetailPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [attachmentRefreshKey, setAttachmentRefreshKey] = useState(0);
 
   // Fetch note data
   const { data: note, isLoading, error } = useQuery({
@@ -293,6 +296,25 @@ export default function NoteDetailPage() {
                   value={formData.tagIds}
                   onChange={(tagIds) => setFormData((prev) => ({ ...prev, tagIds }))}
                 />
+
+                {/* Attachments Section */}
+                {isEditing && (
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        Attachments
+                      </Typography>
+                      <AttachButton 
+                        noteId={noteId} 
+                        onSuccess={() => {
+                          setAttachmentRefreshKey((prev) => prev + 1);
+                          queryClient.invalidateQueries({ queryKey: ['note', noteId] });
+                        }} 
+                      />
+                    </Box>
+                    <AttachmentsList noteId={noteId} refreshTrigger={attachmentRefreshKey} />
+                  </Box>
+                )}
 
                 <TextField
                   label="Content"

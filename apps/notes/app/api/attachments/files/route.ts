@@ -45,7 +45,12 @@ export async function POST(request: NextRequest) {
     // TODO: Upload file to storage (S3/R2/etc)
     // For now, we'll create a placeholder URL
     // In production, implement actual file upload logic
-    const fileUrl = `/uploads/${entityId}/${file.name}`;
+    // Create a proper URL using the request origin
+    const origin = request.headers.get('origin') || request.headers.get('host') || 'http://localhost:3000';
+    const baseUrl = origin.startsWith('http') ? origin : `http://${origin}`;
+    const timestamp = Date.now();
+    const sanitizedFileName = encodeURIComponent(file.name);
+    const fileUrl = `${baseUrl}/api/attachments/files/${entityId}/${timestamp}/${sanitizedFileName}`;
     
     // Get image dimensions if it's an image
     // Note: Image dimensions extraction would require a library like 'sharp' or 'jimp'

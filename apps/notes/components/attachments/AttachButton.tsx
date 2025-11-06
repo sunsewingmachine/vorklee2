@@ -54,6 +54,15 @@ export function AttachButton({ noteId, onSuccess }: AttachButtonProps) {
         startIcon={<AttachFileIcon />}
         onClick={handleClick}
         size="small"
+        sx={{
+          color: 'text.primary',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          '&:hover': {
+            borderColor: 'primary.main',
+            bgcolor: 'action.hover',
+          },
+        }}
       >
         Attach
       </Button>

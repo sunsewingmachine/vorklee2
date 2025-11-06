@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
@@ -14,7 +14,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import FolderIcon from '@mui/icons-material/Folder';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
-import { AttachButton } from '../attachments/AttachButton';
 import { AttachmentsList } from '../attachments/AttachmentsList';
 
 interface Note {
@@ -66,7 +65,6 @@ function getFullFolderPath(notebookId: string, notebooks: Notebook[]): string[] 
 
 export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewerProps) {
   const router = useRouter();
-  const [refreshKey, setRefreshKey] = useState(0);
 
   if (!note) {
     return (
@@ -139,9 +137,6 @@ export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewe
             {note.title || 'Untitled Note'}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <Box sx={{ color: 'inherit' }}>
-              <AttachButton noteId={note.id} onSuccess={() => setRefreshKey((prev) => prev + 1)} />
-            </Box>
             <Tooltip title="Edit note">
               <IconButton 
                 size="small" 
@@ -285,7 +280,7 @@ export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewe
         )}
 
         {/* Attachments */}
-        <AttachmentsList noteId={note.id} refreshTrigger={refreshKey} />
+        <AttachmentsList noteId={note.id} />
       </Box>
     </Paper>
   );

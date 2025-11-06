@@ -21,6 +21,8 @@ import {
   Chip,
 } from '@mui/material';
 import { TagSelector } from '@/components/tags/TagSelector';
+import { AttachButton } from '@/components/attachments/AttachButton';
+import { AttachmentsList } from '@/components/attachments/AttachmentsList';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CancelIcon from '@mui/icons-material/Cancel';
 import SaveIcon from '@mui/icons-material/Save';
@@ -76,6 +78,8 @@ export default function NewNotePage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [createdNoteId, setCreatedNoteId] = useState<string | null>(null);
+  const [attachmentRefreshKey, setAttachmentRefreshKey] = useState(0);
 
   // Fetch notebooks to build folder path
   const { data: notebooks = [] } = useQuery<Notebook[]>({
@@ -119,6 +123,7 @@ export default function NewNotePage() {
       
       const createdNote = data?.data;
       if (createdNote) {
+        setCreatedNoteId(createdNote.id);
         // Check if view mode is tree (stored in localStorage via DashboardContext)
         try {
           const storedViewState = localStorage.getItem('notes-dashboard-view-state');
@@ -134,9 +139,9 @@ export default function NewNotePage() {
             }
           }
           
-          // Always navigate to dashboard with highlight parameter
-          // This shows the tree view with the newly created note highlighted
-          router.push(`/dashboard?highlight=${createdNote.id}&highlightType=note`);
+          // Don't navigate immediately - let user add attachments first
+          // They can navigate manually or we'll navigate after a delay
+          // For now, stay on page so user can add attachments
         } catch (error) {
           // Default to navigating to dashboard with highlight
           console.error('Failed to check view state:', error);
@@ -266,6 +271,25 @@ export default function NewNotePage() {
                 value={formData.tagIds}
                 onChange={(tagIds) => setFormData((prev) => ({ ...prev, tagIds }))}
               />
+
+              {/* Attachments Section */}
+              {createdNoteId && (
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Attachments
+                    </Typography>
+                    <AttachButton 
+                      noteId={createdNoteId} 
+                      onSuccess={() => {
+                        setAttachmentRefreshKey((prev) => prev + 1);
+                        queryClient.invalidateQueries({ queryKey: ['notes'] });
+                      }} 
+                    />
+                  </Box>
+                  <AttachmentsList noteId={createdNoteId} refreshTrigger={attachmentRefreshKey} />
+                </Box>
+              )}
 
               {/* Content Field */}
               <TextField
