@@ -1,9 +1,10 @@
 /**
  * React hooks for attachments
+ * Import from '@vorklee2/core-attachments/hooks' or '@vorklee2/core-attachments/dist/hooks'
  * These are optional helpers for React/Next.js apps
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type {
   FileAttachment,
   LinkAttachment,
@@ -121,8 +122,8 @@ export function useAttachments(entityType: string, entityId: string) {
       const filesData = await filesRes.json();
       const linksData = await linksRes.json();
 
-      setFiles(filesData);
-      setLinks(linksData);
+      setFiles(filesData.data || filesData);
+      setLinks(linksData.data || linksData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch attachments');
     } finally {
@@ -130,6 +131,11 @@ export function useAttachments(entityType: string, entityId: string) {
     }
   };
 
+  useEffect(() => {
+    if (entityId) {
+      fetchAttachments();
+    }
+  }, [entityId, entityType]);
+
   return { files, links, loading, error, fetchAttachments };
 }
-

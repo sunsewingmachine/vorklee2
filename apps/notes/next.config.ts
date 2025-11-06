@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     '@vorklee2/core-audit',
     '@vorklee2/core-analytics',
     '@vorklee2/core-billing',
+    '@vorklee2/core-attachments',
   ],
 };
 

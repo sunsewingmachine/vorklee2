@@ -25,6 +25,6 @@ export * from './validators';
 // Service layer
 export * from './service';
 
-// React hooks (optional, for React/Next.js apps)
-export * from './hooks';
+// React hooks are exported separately - import from '@vorklee2/core-attachments/hooks'
+// This allows the package to work in non-React environments
 

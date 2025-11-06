@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, boolean, integer, varchar, primaryKey, unique, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import { fileAttachments, linkAttachments } from '@vorklee2/core-attachments';
 
 /**
  * Notebooks table - organize notes into collections
@@ -102,38 +103,10 @@ export const noteTags = pgTable('note_tags', {
 });
 
 /**
- * Attachments table - file uploads
- * V5 Specification: Enhanced with virus scanning and image metadata
+ * Re-export attachment tables from core-attachments module
+ * These tables are used for note attachments (entityType: 'note')
  */
-export const attachments = pgTable('attachments', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  noteId: uuid('note_id')
-    .references(() => notes.id, { onDelete: 'cascade' })
-    .notNull(),
-
-  // File metadata
-  fileName: text('file_name').notNull(),
-  fileType: varchar('file_type', { length: 100 }), // MIME type
-  fileSize: integer('file_size').notNull(), // Bytes
-  fileUrl: text('file_url').notNull(), // S3/R2 URL
-
-  // Image-specific metadata
-  width: integer('width'),
-  height: integer('height'),
-  thumbnailUrl: text('thumbnail_url'),
-
-  // Security
-  virusScanStatus: varchar('virus_scan_status', { length: 20 }).default('pending'), // pending, clean, infected
-  virusScanAt: timestamp('virus_scan_at', { withTimezone: true }),
-
-  uploadedBy: uuid('uploaded_by').notNull(),
-  uploadedAt: timestamp('uploaded_at', { withTimezone: true }).defaultNow(),
-}, (table) => {
-  return {
-    noteIdx: index('idx_attachments_note').on(table.noteId),
-    scanPendingIdx: index('idx_attachments_scan_pending').on(table.virusScanStatus),
-  };
-});
+export { fileAttachments, linkAttachments };
 
 /**
  * Sharing table - note collaboration and permissions

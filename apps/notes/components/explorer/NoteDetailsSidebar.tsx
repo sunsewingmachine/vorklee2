@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { AttachmentsList } from '../attachments/AttachmentsList';
 
 interface Note {
   id: string;
@@ -183,6 +184,11 @@ export function NoteDetailsSidebar({ note, notebooks }: NoteDetailsSidebarProps)
           )}
         </Box>
       </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Attachments */}
+      <AttachmentsList noteId={note.id} />
     </Paper>
   );
 }

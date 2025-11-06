@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -14,6 +14,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import FolderIcon from '@mui/icons-material/Folder';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
+import { AttachButton } from '../attachments/AttachButton';
+import { AttachmentsList } from '../attachments/AttachmentsList';
 
 interface Note {
   id: string;
@@ -32,6 +34,7 @@ interface Note {
 interface Notebook {
   id: string;
   name: string;
+  parentId: string | null;
 }
 
 interface NoteContentViewerProps {
@@ -40,8 +43,30 @@ interface NoteContentViewerProps {
   onClose?: () => void;
 }
 
+// Helper function to get full folder path
+function getFullFolderPath(notebookId: string, notebooks: Notebook[]): string[] {
+  const notebook = notebooks.find((nb) => nb.id === notebookId);
+  if (!notebook) return [];
+
+  const path: string[] = [];
+  let currentNotebook: Notebook | undefined = notebook;
+
+  // Build path from current notebook up to root
+  while (currentNotebook) {
+    path.unshift(currentNotebook.name);
+    if (currentNotebook.parentId) {
+      currentNotebook = notebooks.find((nb) => nb.id === currentNotebook!.parentId);
+    } else {
+      currentNotebook = undefined;
+    }
+  }
+
+  return path;
+}
+
 export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewerProps) {
   const router = useRouter();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   if (!note) {
     return (
@@ -69,6 +94,8 @@ export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewe
   const notebook = note.notebookId
     ? notebooks.find((nb) => nb.id === note.notebookId)
     : null;
+  
+  const folderPath = notebook ? getFullFolderPath(notebook.id, notebooks) : [];
 
   return (
     <Paper
@@ -111,7 +138,10 @@ export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewe
           <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
             {note.title || 'Untitled Note'}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Box sx={{ color: 'inherit' }}>
+              <AttachButton noteId={note.id} onSuccess={() => setRefreshKey((prev) => prev + 1)} />
+            </Box>
             <Tooltip title="Edit note">
               <IconButton 
                 size="small" 
@@ -155,10 +185,12 @@ export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewe
           }}
         >
           {/* Folder Path */}
-          {notebook && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {folderPath.length > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
               <FolderIcon sx={{ fontSize: 14 }} />
-              <Typography variant="caption">{notebook.name}</Typography>
+              <Typography variant="caption">
+                {folderPath.join(' > ')}
+              </Typography>
             </Box>
           )}
 
@@ -252,6 +284,8 @@ export function NoteContentViewer({ note, notebooks, onClose }: NoteContentViewe
           </Typography>
         )}
 
+        {/* Attachments */}
+        <AttachmentsList noteId={note.id} refreshTrigger={refreshKey} />
       </Box>
     </Paper>
   );

@@ -22,25 +22,26 @@
     "@neondatabase/serverless": "^0.10.3",
     "@tanstack/react-query": "^5.62.8",
     "@vorklee2/core-analytics": "*",
+    "@vorklee2/core-attachments": "*",
     "@vorklee2/core-audit": "*",
     "@vorklee2/core-auth": "*",
     "@vorklee2/core-billing": "*",
     "@vorklee2/core-utils": "*",
     "drizzle-orm": "^0.36.4",
     "next": "^16.0.1",
-    "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@types/react": "^19.0.0",
+    "@types/react": "^18.3.26",
     "@types/react-dom": "^19.0.0",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.28.1",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.1",
+    "react": "^19.2.0",
     "tsx": "^4.20.6",
     "typescript": "^5.6.0"
   }

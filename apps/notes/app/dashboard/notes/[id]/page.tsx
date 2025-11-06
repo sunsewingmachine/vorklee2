@@ -113,7 +113,8 @@ export default function NoteDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['note', noteId] });
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-      setIsEditing(false);
+      // Navigate back to dashboard with note selected
+      router.push(`/dashboard?highlight=${noteId}&highlightType=note`);
     },
   });
 
@@ -184,16 +185,8 @@ export default function NoteDetailPage() {
   };
 
   const handleCancel = () => {
-    if (note) {
-      setFormData({
-        title: note.title,
-        content: note.content || '',
-        isPinned: note.isPinned,
-        tagIds: note.tags?.map((t) => t.id) || [],
-      });
-    }
-    setIsEditing(false);
-    setErrors({});
+    // Navigate back to dashboard with note selected
+    router.push(`/dashboard?highlight=${noteId}&highlightType=note`);
   };
 
   const handleDelete = () => {
