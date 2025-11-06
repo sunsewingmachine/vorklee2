@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import ImageIcon from '@mui/icons-material/Image';
 import LinkIcon from '@mui/icons-material/Link';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import type { FileAttachment, LinkAttachment } from '@vorklee2/core-attachments';
@@ -27,6 +28,7 @@ export function AttachmentsList({ noteId, onDelete, refreshTrigger }: Attachment
   const [files, setFiles] = useState<FileAttachment[]>([]);
   const [links, setLinks] = useState<LinkAttachment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   const fetchAttachments = async () => {
     try {
@@ -126,7 +128,7 @@ export function AttachmentsList({ noteId, onDelete, refreshTrigger }: Attachment
           {files.map((file) => (
             <Grid item xs={12} sm={6} md={4} key={file.id}>
               <Card>
-                {isImage(file.fileType) && file.fileUrl && (
+                {isImage(file.fileType) && file.fileUrl && !imageErrors.has(file.id) && (
                   <CardMedia
                     component="img"
                     height="200"
@@ -135,12 +137,34 @@ export function AttachmentsList({ noteId, onDelete, refreshTrigger }: Attachment
                     sx={{ 
                       objectFit: 'cover',
                       cursor: 'pointer',
+                      width: '100%',
                       '&:hover': {
                         opacity: 0.8,
                       },
                     }}
                     onClick={() => window.open(file.fileUrl, '_blank')}
+                    onError={() => {
+                      setImageErrors((prev) => new Set(prev).add(file.id));
+                    }}
                   />
+                )}
+                {isImage(file.fileType) && imageErrors.has(file.id) && (
+                  <Box
+                    sx={{
+                      height: 200,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'grey.100',
+                      gap: 1,
+                    }}
+                  >
+                    <ImageIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
+                    <Typography variant="caption" color="text.secondary">
+                      Preview unavailable
+                    </Typography>
+                  </Box>
                 )}
                 {isPdf(file.fileType) && (
                   <Box

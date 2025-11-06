@@ -4,6 +4,18 @@ import { checkSubscription } from '@vorklee2/core-billing';
 import { createAttachmentService, validateFileUpload, validateLink } from '@vorklee2/core-attachments';
 import { db } from '@/db/db';
 import { successResponse, errorResponse, createError } from '@/lib/api-response';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
+
+// Ensure uploads directory exists
+const UPLOADS_DIR = join(process.cwd(), 'public', 'uploads');
+
+async function ensureUploadsDir() {
+  if (!existsSync(UPLOADS_DIR)) {
+    await mkdir(UPLOADS_DIR, { recursive: true });
+  }
+}
 
 /**
  * POST /api/attachments/files - Upload and create a file attachment
@@ -42,15 +54,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Upload file to storage (S3/R2/etc)
-    // For now, we'll create a placeholder URL
-    // In production, implement actual file upload logic
-    // Create a proper URL using the request origin
-    const origin = request.headers.get('origin') || request.headers.get('host') || 'http://localhost:3000';
+    // Store file temporarily (in production, use S3/R2/etc)
+    await ensureUploadsDir();
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const fileName = `${entityId}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const filePath = join(UPLOADS_DIR, fileName);
+    
+    try {
+      await writeFile(filePath, fileBuffer);
+    } catch (error) {
+      console.error('Error writing file:', error);
+      return errorResponse(
+        createError('INTERNAL_ERROR', `Failed to save file: ${error instanceof Error ? error.message : 'Unknown error'}`),
+        request,
+        500
+      );
+    }
+
+    // Create a proper URL to serve the file
+    const origin = request.headers.get('origin') || request.headers.get('host') || 'http://localhost:3001';
     const baseUrl = origin.startsWith('http') ? origin : `http://${origin}`;
-    const timestamp = Date.now();
-    const sanitizedFileName = encodeURIComponent(file.name);
-    const fileUrl = `${baseUrl}/api/attachments/files/${entityId}/${timestamp}/${sanitizedFileName}`;
+    const fileUrl = `${baseUrl}/api/attachments/files/${fileName}`;
     
     // Get image dimensions if it's an image
     // Note: Image dimensions extraction would require a library like 'sharp' or 'jimp'
