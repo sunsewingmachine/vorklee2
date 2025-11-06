@@ -7,8 +7,6 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import ExpandLess from '@mui/icons-material/ExpandLess';
-import ExpandMore from '@mui/icons-material/ExpandMore';
 import HomeIcon from '@mui/icons-material/Home';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import HistoryIcon from '@mui/icons-material/History';
@@ -265,7 +263,9 @@ function UnifiedDashboardLayoutInner({
                 >
                   <ListItemIcon sx={{ color: '#90caf9' }}>{app.icon}</ListItemIcon>
                   <ListItemText primary={app.label} sx={{ '& .MuiTypography-root': { fontWeight: mainHref && isActive(mainHref) ? 600 : 600 } }} />
-                  {expandedApps[appKey] ? <ExpandLess /> : <ExpandMore />}
+                  <Typography sx={{ color: '#90caf9', fontSize: '1.2rem', fontWeight: 'bold', ml: 1 }}>
+                    {expandedApps[appKey] ? '−' : '+'}
+                  </Typography>
                 </ListItemButton>
               </ListItem>
             <Collapse in={expandedApps[appKey]} timeout="auto" unmountOnExit>
